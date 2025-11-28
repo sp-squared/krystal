@@ -91,7 +91,7 @@ class NetworkGraphWidget(Widget):
                 
                 Color(*color)
                 Ellipse(pos=(x-15, y-15), size=(30, 30))
-
+                
 class WelcomeScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
