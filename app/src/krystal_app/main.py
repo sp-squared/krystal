@@ -212,7 +212,7 @@ class WelcomeScreen(MDScreen):
             padding=dp(20),
             spacing=dp(15),
             size_hint_y=0.4,
-            elevation=1,
+            elevation=0,
             radius=[dp(15), dp(15), dp(15), dp(15)]
         )
         
@@ -267,7 +267,7 @@ class WelcomeScreen(MDScreen):
             size_hint_y=None,
             height=dp(50),
             md_bg_color=[0.2, 0.6, 0.8, 1],
-            elevation=2
+            elevation=0
         )
         self.start_button.bind(on_press=self.start_analysis)
         
@@ -352,7 +352,7 @@ class AnalysisScreen(MDScreen):
         # Top App Bar
         self.top_bar = MDTopAppBar(
             title="Power Analysis",
-            elevation=2,
+            elevation=0,
             md_bg_color=[0.2, 0.6, 0.8, 1],
             specific_text_color=[1, 1, 1, 1],
             left_action_items=[["arrow-left", lambda x: self.go_back()]],
@@ -378,7 +378,7 @@ class AnalysisScreen(MDScreen):
             orientation="vertical",
             padding=dp(20),
             spacing=dp(15),
-            elevation=1,
+            elevation=0,
             radius=[dp(15), dp(15), dp(15), dp(15)],
             size_hint_y=None,
             height=dp(300)
@@ -467,7 +467,7 @@ class AnalysisScreen(MDScreen):
             text="Start Analysis",
             size_hint_x=0.7,
             md_bg_color=[0.2, 0.6, 0.8, 1],
-            elevation=1,
+            elevation=0,
             on_release=self.analyze_article
         )
         
@@ -990,14 +990,14 @@ class AnalysisScreen(MDScreen):
         except:
             source_name = "Unknown"
         
-        # Header section with source info - REDUCED ELEVATION
+        # Header section with source info - NO ELEVATION
         header_card = MDCard(
             orientation="vertical",
             padding=dp(20),
             spacing=dp(10),
             size_hint_y=None,
             height=dp(120),
-            elevation=1,  # Reduced from 2
+            elevation=0,  # Reduced from 2
             radius=[dp(15), dp(15), dp(15), dp(15)],
             md_bg_color=[0.95, 0.97, 1.0, 1]
         )
@@ -1102,7 +1102,7 @@ class AnalysisScreen(MDScreen):
             help_card.add_widget(help_label)
             self.results_container.add_widget(help_card)
         
-        # Network Overview Section - REDUCED ELEVATION
+        # Network Overview Section - NO ELEVATION
         if analysis.get('summary', {}).get('entity_count', 0) > 0:
             overview_card = MDCard(
                 orientation="vertical",
@@ -1110,7 +1110,7 @@ class AnalysisScreen(MDScreen):
                 spacing=dp(15),
                 size_hint_y=None,
                 height=dp(180),
-                elevation=1,  # Reduced from 2
+                elevation=0,  # Reduced from 2
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
             
@@ -1153,7 +1153,7 @@ class AnalysisScreen(MDScreen):
             overview_card.add_widget(stats_grid)
             self.results_container.add_widget(overview_card)
         
-        # Entity Distribution - REDUCED ELEVATION
+        # Entity Distribution - NO ELEVATION
         entities = analysis.get('influence_rankings', [])
         if entities:
             # Entity type distribution
@@ -1226,7 +1226,7 @@ class AnalysisScreen(MDScreen):
             distribution_card.add_widget(type_layout)
             self.results_container.add_widget(distribution_card)
         
-        # Top Influencers - REDUCED ELEVATION  
+        # Top Influencers - NO ELEVATION  
         if analysis['influence_rankings']:
             influencers_card = MDCard(
                 orientation="vertical",
@@ -1234,7 +1234,7 @@ class AnalysisScreen(MDScreen):
                 spacing=dp(15),
                 size_hint_y=None,
                 height=dp(320),
-                elevation=1,  # Reduced from 2
+                elevation=0,  # Reduced from 2
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
             
@@ -1341,7 +1341,7 @@ class AnalysisScreen(MDScreen):
             
             self.results_container.add_widget(influencers_card)
         
-        # Key Findings - REDUCED ELEVATION
+        # Key Findings - NO ELEVATION
         if analysis.get('key_findings'):
             findings_card = MDCard(
                 orientation="vertical",
