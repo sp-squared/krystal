@@ -99,18 +99,27 @@ class WelcomeScreen(MDScreen):
         self.build_ui()
     
     def build_ui(self):
-        main_layout = MDBoxLayout(
-            orientation="vertical",
-            padding="20dp",
-            spacing="20dp"
-        )
-        self.content_layout = MDBoxLayout(
-            orientation="vertical", 
-            size_hint_y=None,
-            padding="10dp",
-            spacing="10dp"
-        )
+        #main_layout = MDBoxLayout(
+            #orientation="vertical",
+            #padding="20dp",
+            #spacing="20dp"
+        #)
+        #self.content_layout = MDBoxLayout(
+            #orientation="vertical", 
+            #size_hint_y=None,
+            #adding="10dp",
+            #spacing="10dp"
 
+        main_layout = MDBoxLayout(orientation="vertical")
+        
+        # FIX: Remove the nested header_layout definition and define it directly
+        header_layout = MDBoxLayout(orientation="vertical")  # Move this line here
+        
+        self.icon_label = MDIconButton(
+            icon="magnify",
+            disabled=True
+        )
+        
         title_layout = MDBoxLayout(orientation="vertical")
         title_label = MDLabel(
             text="KRYSTAL",
@@ -122,12 +131,13 @@ class WelcomeScreen(MDScreen):
             font_style="Subtitle1",
             halign="center"
         )
-
+        
         title_layout.add_widget(title_label)
         title_layout.add_widget(subtitle_label)
+        
         header_layout.add_widget(self.icon_label)
         header_layout.add_widget(title_layout)
-        
+    
         features_layout = MDBoxLayout(orientation="vertical")
         
         features_title = MDLabel(
