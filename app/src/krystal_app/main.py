@@ -640,88 +640,70 @@ class AnalysisScreen(MDScreen):
             api_status = "🔴 Mock Data" if not self.news_client.is_api_available() else "🟢 Real News API"
             self.show_message(f"Using {api_status}")
             
-            # Extract entities from articles
+            # Extract entities from articles - FIXED: Pass the query parameter
             entities = []
             for article in articles:
                 # Combine title and content for entity extraction
                 text_content = f"{article.get('title', '')} {article.get('description', '')} {article.get('content', '')}"
                 if text_content.strip():
-                    article_entities = self.news_client.extract_entities(text_content)
+                    # FIX: Pass the query parameter to extract_entities
+                    article_entities = self.news_client.extract_entities(text_content, query)
                     entities.extend(article_entities)
+            
+            # Also include entities that were already extracted by NewsClient
+            for article in articles:
+                if 'entities' in article and article['entities']:
+                    entities.extend(article['entities'])
+            
+            # Remove duplicates based on entity name
+            unique_entities = {}
+            for entity in entities:
+                name = entity.get('name', '')
+                if name and name not in unique_entities:
+                    unique_entities[name] = entity
+            
+            entities = list(unique_entities.values())
             
             # If no entities found in articles, create some from the query
             if not entities:
                 entities = self._create_entities_from_query(query)
             
-            # Get additional entities from LittleSis based on search query
-            try:
-                ls_entities = self.littlesis_client.search_entities(query)
-                entities.extend(ls_entities)
-            except Exception as e:
-                print(f"LittleSis search failed: {e}")
-                # Continue with just news entities
+            # Get LittleSis entities based on the discovered entity names
+            entity_names = [entity['name'] for entity in entities if 'name' in entity]
+            ls_entities = self.littlesis_client.search_entities(entity_names)
+            entities.extend(ls_entities)
             
-            # Ensure all entities have proper structure for PowerMapper
-            entities = self._ensure_entity_structure(entities)
-            
-            # Remove duplicates based on entity ID
+            # Remove duplicates again after adding LittleSis entities
             unique_entities = {}
             for entity in entities:
-                entity_id = entity.get('id')
-                if entity_id and entity_id not in unique_entities:
-                    unique_entities[entity_id] = entity
+                name = entity.get('name', '')
+                if name and name not in unique_entities:
+                    unique_entities[name] = entity
             
             entities = list(unique_entities.values())
-        
-            # Get relationships (skip LittleSis for generated IDs)
+            
+            # Get relationships (with error handling)
             relationships = []
             for entity in entities[:5]:  # Limit to avoid too many API calls
                 try:
                     entity_id = entity.get('id')
-                    # Only try LittleSis for entities that have numeric IDs (not our generated ones)
-                    if (entity_id and 
-                        not str(entity_id).startswith('entity_') and 
-                        not str(entity_id).startswith('corporate_') and
-                        not str(entity_id).startswith('government_') and
-                        str(entity_id).isdigit()):  # Only numeric IDs
-                        
-                        print(f"DEBUG: Fetching LittleSis connections for {entity['name']} (ID: {entity_id})")
-                        
-                        # Convert to integer for LittleSis API
-                        littlesis_id = int(entity_id)
-                        connections = self.littlesis_client.get_entity_connections(littlesis_id)
-                        
-                        # Ensure connections have proper source/target format
-                        for conn in connections:
-                            if 'source' not in conn:
-                                conn['source'] = str(entity_id)  # Keep as string for our graph
-                            if 'target' not in conn:
-                                # Try different possible target fields
-                                target = conn.get('entity2_id') or conn.get('target_id') or conn.get('id') or 'unknown'
-                                conn['target'] = str(target)  # Convert to string for consistency
-                            # Ensure strength field exists
-                            if 'strength' not in conn:
-                                conn['strength'] = 0.5
-                        
+                    entity_name = entity.get('name', '')
+                    if entity_id and entity_name:
+                        connections = self.littlesis_client.get_entity_connections(entity_id, entity_name, max_connections=3)
                         relationships.extend(connections)
-                        print(f"DEBUG: Found {len(connections)} connections for {entity['name']}")
-                    else:
-                        print(f"DEBUG: Skipping LittleSis for generated/non-numeric ID: {entity_id}")
-                        
                 except Exception as e:
                     print(f"Failed to get connections for {entity.get('name', 'unknown')}: {e}")
                     continue
             
-            # Always create sample relationships to ensure we have some connections
-            sample_relationships = self._create_sample_relationships(entities)
-            relationships.extend(sample_relationships)
-            print(f"DEBUG: Created {len(sample_relationships)} sample relationships")
+            # If no relationships found, create some sample ones
+            if not relationships:
+                relationships = self._create_sample_relationships(entities)
             
             print(f"DEBUG: Starting analysis with {len(entities)} entities and {len(relationships)} relationships")
             
             # Perform actual analysis
             analysis = self.mapper.analyze_network(entities, relationships)
-        
+            
             # Clear loading item and display results
             self.results_layout.clear_widgets()
             self.display_analysis_results(analysis, articles[0], api_status)
@@ -738,7 +720,7 @@ class AnalysisScreen(MDScreen):
             print(f"Analysis complete error: {e}")
             import traceback
             traceback.print_exc()
-            self._analysis_error(f"Analysis failed: {str(e)}")   
+            self._analysis_error(f"Analysis failed: {str(e)}")
 
     def _create_entities_from_query(self, query):
         """Create basic entities from search query when no entities are found"""
