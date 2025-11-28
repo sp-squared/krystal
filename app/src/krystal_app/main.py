@@ -305,39 +305,6 @@ class WelcomeScreen(MDScreen):
         input_card.add_widget(button_layout)
         content_layout.add_widget(input_card)
         
-        # Progress Card
-        self.progress_card = MDCard(
-            orientation="vertical",
-            padding=dp(20),
-            spacing=dp(15),
-            elevation=2,
-            radius=[dp(15), dp(15), dp(15), dp(15)],
-            opacity=0,
-            size_hint_y=None,
-            height=dp(120)
-        )
-        
-        progress_title = MDLabel(
-            text="Analysis Progress",
-            font_style="H6",
-            theme_text_color="Primary"
-        )
-        
-        self.status_label = MDLabel(
-            text="Ready to analyze power structures",
-            font_style="Body1",
-            theme_text_color="Secondary"
-        )
-        
-        self.progress_bar = MDProgressBar(
-            value=self.progress_value,
-        )
-        
-        self.progress_card.add_widget(progress_title)
-        self.progress_card.add_widget(self.status_label)
-        self.progress_card.add_widget(self.progress_bar)
-        content_layout.add_widget(self.progress_card)
-        
         # Results Section - DIRECTLY BELOW INPUT
         results_title = MDLabel(
             text="Analysis Results",
