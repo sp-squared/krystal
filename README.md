@@ -28,13 +28,6 @@ To make power structure analysis accessible on mobile devices, enabling users to
 - **Packaging**: Buildozer for Android/iOS deployment
 - **License**: GNU GPL v3
 
-## 🛠 Technology Stack
-
-- **Frontend**: Qt 6 (LGPL v3)
-- **Language**: C++/QML
-- **APIs**: Google News, LittleSis, OpenSecrets
-- **License**: GNU LGPL v3
-
 ## 📄 License
 
 This project is licensed under the **GNU Lesser General Public License v3.0**.
