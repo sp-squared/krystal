@@ -166,7 +166,194 @@ class WelcomeScreen(MDScreen):
         super().__init__(**kwargs)
         self.name = 'welcome'
         self.build_ui()
+    
+    def build_ui(self):
+        # Main layout with gradient background
+        main_layout = MDBoxLayout(
+            orientation="vertical",
+            padding=dp(40),
+            spacing=dp(30),
+            md_bg_color=[0.95, 0.95, 0.98, 1]
+        )
+        
+        # Header section
+        header_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing=dp(20),
+            size_hint_y=0.4
+        )
+        
+        # App icon - Using MDIconButton as a workaround
+        self.icon_label = MDIconButton(
+            icon="magnify",
+            theme_text_color="Custom",
+            text_color=[0.2, 0.5, 0.8, 1],
+            font_size="64sp",
+            disabled=True  # Make it non-interactive
+        )
+        
+        # App title
+        title_layout = MDBoxLayout(orientation="vertical", spacing=dp(5))
+        title_label = MDLabel(
+            text="KRYSTAL",
+            font_style="H4",
+            bold=True,
+            theme_text_color="Custom",
+            text_color=[0.1, 0.3, 0.6, 1],
+            halign="center"
+        )
+        subtitle_label = MDLabel(
+            text="Power Structure Mapper",
+            font_style="Subtitle1",
+            theme_text_color="Secondary",
+            halign="center"
+        )
+        
+        title_layout.add_widget(title_label)
+        title_layout.add_widget(subtitle_label)
+        
+        header_layout.add_widget(self.icon_label)
+        header_layout.add_widget(title_layout)
+        
+        # Features section
+        features_card = MDCard(
+            orientation="vertical",
+            padding=dp(20),
+            spacing=dp(15),
+            size_hint_y=0.4,
+            elevation=1,  # Reduced elevation
+            radius=[dp(15), dp(15), dp(15), dp(15)]
+        )
+        
+        features_title = MDLabel(
+            text="Discover Hidden Connections",
+            font_style="H6",
+            theme_text_color="Primary",
+            halign="center"
+        )
+        
+        features_list = MDBoxLayout(orientation="vertical", spacing=dp(10))
+        
+        # Using MDIconButton for icons since MDIcon is not available
+        features = [
+            ("magnify", "Analyze news articles for power structures"),
+            ("chart-box", "Visualize relationship networks"),
+            ("office-building", "Track corporate and government ties"),
+            ("lock", "Privacy-first, no data collection")
+        ]
+        
+        for icon, text in features:
+            feature_item = MDBoxLayout(orientation="horizontal", spacing=dp(15))
+            icon_widget = MDIconButton(
+                icon=icon,
+                theme_text_color="Primary",
+                size_hint_x=0.2,
+                disabled=True,
+                font_size="24sp"
+            )
+            text_label = MDLabel(
+                text=text,
+                font_style="Body2",
+                theme_text_color="Secondary",
+                size_hint_x=0.8
+            )
+            feature_item.add_widget(icon_widget)
+            feature_item.add_widget(text_label)
+            features_list.add_widget(feature_item)
+        
+        features_card.add_widget(features_title)
+        features_card.add_widget(features_list)
 
+        # Action buttons
+        action_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing=dp(15),
+            size_hint_y=0.2
+        )
+        
+        self.start_button = MDRaisedButton(
+            text="Start Analysis",
+            size_hint_y=None,
+            height=dp(50),
+            md_bg_color=[0.2, 0.6, 0.8, 1],
+            elevation=2  # Reduced elevation
+        )
+        self.start_button.bind(on_press=self.start_analysis)
+        
+        sample_button = MDFlatButton(
+            text="Try Sample Data",
+            size_hint_y=None,
+            height=dp(40),
+            theme_text_color="Custom",
+            text_color=[0.2, 0.6, 0.8, 1]
+        )
+        sample_button.bind(on_press=self.show_sample)
+        
+        action_layout.add_widget(self.start_button)
+        action_layout.add_widget(sample_button)
+        
+        # Assemble main layout
+        main_layout.add_widget(header_layout)
+        main_layout.add_widget(features_card)
+        main_layout.add_widget(action_layout)
+        
+        self.add_widget(main_layout)
+    
+    def start_analysis(self, instance):
+        """Navigate to analysis screen"""
+        self.manager.current = 'analysis'
+    
+    def show_sample(self, instance):
+        """Show sample data preview"""
+        sample_dialog = MDDialog(
+            title="Sample Analysis",
+            text="This will load a demonstration with sample power structure data showing how Krystal analyzes relationships between corporations, government entities, and influential organizations.",
+            buttons=[
+                MDFlatButton(
+                    text="Cancel",
+                    theme_text_color="Custom",
+                    text_color=[0.5, 0.5, 0.5, 1],
+                    on_release=lambda x: sample_dialog.dismiss()
+                ),
+                MDRaisedButton(
+                    text="Load Sample",
+                    md_bg_color=[0.2, 0.6, 0.8, 1],
+                    on_release=lambda x: self.load_sample_data(sample_dialog)
+                ),
+            ],
+        )
+        sample_dialog.open()
+    
+    def load_sample_data(self, dialog):
+        """Load sample data and navigate to analysis"""
+        dialog.dismiss()
+        self.manager.current = 'analysis'
+        analysis_screen = self.manager.get_screen('analysis')
+        Clock.schedule_once(lambda dt: analysis_screen.load_sample_data(), 0.5)
+
+
+class AnalysisScreen(MDScreen):
+    """Modern analysis screen with enhanced UX and News API integration"""
+    
+    progress_value = NumericProperty(0)
+    status_text = StringProperty("Ready to analyze power structures")
+    is_analyzing = BooleanProperty(False)
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "analysis"
+        
+        # Initialize core components
+        self.mapper = PowerMapper()
+        self.news_client = NewsClient()
+        self.littlesis_client = LittleSisClient()
+        
+        self.dialog = None
+        self.active_analysis_type = "News"
+        self.active_news_category = None
+        self.current_analysis = None
+        Clock.schedule_once(lambda dt: self.build_ui(), 0.1)
+    
     def build_ui(self):
         # Main layout
         main_layout = MDBoxLayout(orientation="vertical")
@@ -174,7 +361,7 @@ class WelcomeScreen(MDScreen):
         # Top App Bar
         self.top_bar = MDTopAppBar(
             title="Power Analysis",
-            elevation=4,
+            elevation=2,  # Reduced elevation
             md_bg_color=[0.2, 0.6, 0.8, 1],
             specific_text_color=[1, 1, 1, 1],
             left_action_items=[["arrow-left", lambda x: self.go_back()]],
@@ -192,13 +379,7 @@ class WelcomeScreen(MDScreen):
             bar_width=dp(4),    # Thinner scrollbar
             bar_color=[0.2, 0.6, 0.8, 0.5]  # Custom scrollbar color
         )
-        
-        content_layout = MDBoxLayout(
-            orientation="vertical", 
-            padding=dp(20), 
-            spacing=dp(20), 
-            size_hint_y=None
-        )
+        content_layout = MDBoxLayout(orientation="vertical", padding=dp(20), spacing=dp(20), size_hint_y=None)
         content_layout.bind(minimum_height=content_layout.setter('height'))
         
         # Input Card
@@ -206,7 +387,7 @@ class WelcomeScreen(MDScreen):
             orientation="vertical",
             padding=dp(20),
             spacing=dp(15),
-            elevation=2,
+            elevation=1,  # Reduced elevation
             radius=[dp(15), dp(15), dp(15), dp(15)],
             size_hint_y=None,
             height=dp(300)
@@ -295,6 +476,7 @@ class WelcomeScreen(MDScreen):
             text="Start Analysis",
             size_hint_x=0.7,
             md_bg_color=[0.2, 0.6, 0.8, 1],
+            elevation=1,  # Reduced elevation
             on_release=self.analyze_article
         )
         
@@ -321,7 +503,7 @@ class WelcomeScreen(MDScreen):
             orientation="vertical",
             padding=dp(20),
             spacing=dp(15),
-            elevation=2,
+            elevation=1,  # Reduced elevation
             radius=[dp(15), dp(15), dp(15), dp(15)],
             opacity=0,
             size_hint_y=None,
@@ -427,7 +609,7 @@ class WelcomeScreen(MDScreen):
             keywords = ' '.join(keywords.split()).strip()  # Remove extra spaces
             
             # Convert to title case for better display
-            keywords = keywords.title()
+            keywords = keywords.Title()
             
             # If we have no meaningful keywords, use domain-based fallback
             if not keywords or len(keywords) < 3:
@@ -719,7 +901,7 @@ class WelcomeScreen(MDScreen):
             import traceback
             traceback.print_exc()
             self._analysis_error(f"Analysis failed: {str(e)}")
-
+    
     def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data", 
                             original_url=None, extracted_topic=None):
         """Display beautiful analysis results in the results container"""
@@ -750,7 +932,105 @@ class WelcomeScreen(MDScreen):
             md_bg_color=[0.95, 0.97, 1.0, 1]
         )
         
-        # ... rest of your card creations with reduced elevation ...
+        # Article title
+        title_label = MDLabel(
+            text=article.get('title', 'Analysis Results'),
+            font_style="H6",
+            theme_text_color="Primary",
+            halign="center",
+            size_hint_y=None,
+            height=dp(40)
+        )
+        
+        # Source and API status
+        source_layout = MDBoxLayout(orientation="horizontal", adaptive_height=True)
+        source_label = MDLabel(
+            text=f"Source: {source_name}",
+            font_style="Body2",
+            theme_text_color="Secondary",
+            size_hint_x=0.6
+        )
+        api_label = MDLabel(
+            text=api_status,
+            font_style="Caption",
+            theme_text_color="Custom",
+            text_color=[0.2, 0.7, 0.3, 1] if "LIVE" in api_status else [0.8, 0.2, 0.2, 1],
+            halign="right",
+            size_hint_x=0.4
+        )
+        
+        source_layout.add_widget(source_label)
+        source_layout.add_widget(api_label)
+        header_card.add_widget(title_label)
+        header_card.add_widget(source_layout)
+        
+        self.results_container.add_widget(header_card)
+        
+        # URL context if applicable
+        if original_url and extracted_topic:
+            url_card = MDCard(
+                orientation="horizontal",
+                padding=dp(20),
+                spacing=dp(15),
+                size_hint_y=None,
+                height=dp(80),
+                elevation=0,  # Reduced from 1
+                radius=[dp(10), dp(10), dp(10), dp(10)]
+            )
+            
+            url_icon = MDIconButton(
+                icon="link",
+                theme_text_color="Primary",
+                disabled=True
+            )
+            
+            url_content = MDBoxLayout(orientation="vertical", spacing=dp(5))
+            url_title = MDLabel(
+                text="URL Analysis",
+                font_style="Body2",
+                theme_text_color="Primary"
+            )
+            url_subtitle = MDLabel(
+                text=f"Topic: {extracted_topic}",
+                font_style="Caption",
+                theme_text_color="Secondary"
+            )
+            url_content.add_widget(url_title)
+            url_content.add_widget(url_subtitle)
+            
+            url_card.add_widget(url_icon)
+            url_card.add_widget(url_content)
+            self.results_container.add_widget(url_card)
+        
+        # API help if using mock data
+        if "Mock" in api_status:
+            help_card = MDCard(
+                orientation="horizontal",
+                padding=dp(20),
+                spacing=dp(15),
+                size_hint_y=None,
+                height=dp(60),
+                elevation=0,  # Reduced from 1
+                radius=[dp(10), dp(10), dp(10), dp(10)],
+                md_bg_color=[1.0, 0.95, 0.9, 1]
+            )
+            
+            help_icon = MDIconButton(
+                icon="alert-circle",
+                theme_text_color="Custom",
+                text_color=[0.9, 0.6, 0.1, 1],
+                disabled=True
+            )
+            
+            help_label = MDLabel(
+                text="Set NEWS_API_KEY for real news data",
+                font_style="Caption",
+                theme_text_color="Secondary"
+            )
+            
+            help_card.add_widget(help_icon)
+            help_card.add_widget(help_label)
+            self.results_container.add_widget(help_card)
         
         # Network Overview Section - REDUCED ELEVATION
         if analysis.get('summary', {}).get('entity_count', 0) > 0:
@@ -764,8 +1044,54 @@ class WelcomeScreen(MDScreen):
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
             
+            overview_title = MDLabel(
+                text="Network Overview",
+                font_style="H6",
+                theme_text_color="Primary"
+            )
+            overview_card.add_widget(overview_title)
+            
+            # Stats in a grid
+            stats_grid = MDGridLayout(cols=2, spacing=dp(15), padding=dp(10), adaptive_height=True)
+            
+            summary = analysis.get('summary', {})
+            stats_data = [
+                ("Entities", f"{summary.get('entity_count', 0)}"),
+                ("Relationships", f"{summary.get('relationship_count', 0)}"), 
+                ("Components", f"{summary.get('connected_components', 1)}"),
+                ("Density", f"{summary.get('network_density', 0):.3f}")
+            ]
+            
+            for label, value in stats_data:
+                stat_item = MDBoxLayout(orientation="vertical", spacing=dp(5))
+                value_label = MDLabel(
+                    text=value,
+                    font_style="H5",
+                    theme_text_color="Primary",
+                    halign="center"
+                )
+                label_label = MDLabel(
+                    text=label,
+                    font_style="Caption",
+                    theme_text_color="Secondary",
+                    halign="center"
+                )
+                stat_item.add_widget(value_label)
+                stat_item.add_widget(label_label)
+                stats_grid.add_widget(stat_item)
+            
+            overview_card.add_widget(stats_grid)
+            self.results_container.add_widget(overview_card)
+        
         # Entity Distribution - REDUCED ELEVATION
+        entities = analysis.get('influence_rankings', [])
         if entities:
+            # Entity type distribution
+            type_counts = {}
+            for entity in entities:
+                entity_type = entity.get('type', 'unknown')
+                type_counts[entity_type] = type_counts.get(entity_type, 0) + 1
+            
             distribution_card = MDCard(
                 orientation="vertical",
                 padding=dp(20),
@@ -776,6 +1102,60 @@ class WelcomeScreen(MDScreen):
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
             
+            distribution_title = MDLabel(
+                text="Entity Distribution",
+                font_style="H6",
+                theme_text_color="Primary"
+            )
+            distribution_card.add_widget(distribution_title)
+            
+            # Entity types in a row
+            type_layout = MDBoxLayout(orientation="horizontal", spacing=dp(15), adaptive_height=True)
+            
+            type_icons = {
+                'person': "account",
+                'corporation': "office-building", 
+                'government': "government",
+                'organization': "account-group"
+            }
+            
+            for entity_type, count in type_counts.items():
+                type_item = MDBoxLayout(
+                    orientation="vertical",
+                    spacing=dp(5),
+                    size_hint_x=None,
+                    width=dp(80)
+                )
+                
+                icon_widget = MDIconButton(
+                    icon=type_icons.get(entity_type, "help-circle"),
+                    theme_text_color="Primary",
+                    font_size="24sp",
+                    disabled=True
+                )
+                
+                count_label = MDLabel(
+                    text=str(count),
+                    font_style="Body1",
+                    theme_text_color="Primary",
+                    halign="center"
+                )
+                
+                type_label = MDLabel(
+                    text=entity_type.title(),
+                    font_style="Caption",
+                    theme_text_color="Secondary",
+                    halign="center"
+                )
+                
+                type_item.add_widget(icon_widget)
+                type_item.add_widget(count_label)
+                type_item.add_widget(type_label)
+                type_layout.add_widget(type_item)
+            
+            distribution_card.add_widget(type_layout)
+            self.results_container.add_widget(distribution_card)
+        
         # Top Influencers - REDUCED ELEVATION  
         if analysis['influence_rankings']:
             influencers_card = MDCard(
@@ -788,6 +1168,109 @@ class WelcomeScreen(MDScreen):
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
             
+            influencers_title = MDLabel(
+                text="Most Influential Entities",
+                font_style="H6",
+                theme_text_color="Primary"
+            )
+            influencers_card.add_widget(influencers_title)
+            
+            for i, entity in enumerate(analysis['influence_rankings'][:4]):  # Show top 4
+                score = entity.get('influence_score', 0)
+                
+                influencer_item = MDBoxLayout(
+                    orientation="horizontal",
+                    adaptive_height=True,
+                    spacing=dp(15),
+                    padding=dp(10)
+                )
+                
+                # Rank badge
+                rank_badge = MDCard(
+                    size_hint=(None, None),
+                    size=(dp(40), dp(40)),
+                    elevation=0,  # Reduced from 1
+                    radius=[dp(20), dp(20), dp(20), dp(20)],
+                    md_bg_color=[0.2, 0.6, 0.8, 1]
+                )
+                rank_label = MDLabel(
+                    text=str(i+1),
+                    font_style="H6",
+                    theme_text_color="Custom",
+                    text_color=[1, 1, 1, 1],
+                    halign="center",
+                    valign="center"
+                )
+                rank_badge.add_widget(rank_label)
+                
+                # Entity info
+                info_layout = MDBoxLayout(orientation="vertical", spacing=dp(2), size_hint_x=0.5)
+                name_label = MDLabel(
+                    text=entity['name'],
+                    font_style="Body1",
+                    theme_text_color="Primary",
+                    size_hint_y=None,
+                    height=dp(25)
+                )
+                type_label = MDLabel(
+                    text=entity.get('type', 'Entity').title(),
+                    font_style="Caption",
+                    theme_text_color="Secondary",
+                    size_hint_y=None,
+                    height=dp(20)
+                )
+                info_layout.add_widget(name_label)
+                info_layout.add_widget(type_label)
+                
+                # Score with visual indicator
+                score_layout = MDBoxLayout(
+                    orientation="vertical",
+                    spacing=dp(5),
+                    size_hint_x=0.3
+                )
+                score_label = MDLabel(
+                    text=f"{score:.1f}",
+                    font_style="Body1",
+                    theme_text_color="Primary",
+                    halign="right",
+                    size_hint_y=None,
+                    height=dp(25)
+                )
+                
+                # Progress bar
+                progress_bg = MDBoxLayout(
+                    size_hint_y=None,
+                    height=dp(6),
+                    md_bg_color=[0.9, 0.9, 0.9, 1],
+                    radius=[dp(3), dp(3), dp(3), dp(3)]
+                )
+                progress_fill = MDBoxLayout(
+                    size_hint_x=min(score/100, 1.0),
+                    size_hint_y=1,
+                    md_bg_color=[0.2, 0.6, 0.8, 1],
+                    radius=[dp(3), dp(3), dp(3), dp(3)]
+                )
+                progress_bg.add_widget(progress_fill)
+                
+                score_layout.add_widget(score_label)
+                score_layout.add_widget(progress_bg)
+                
+                influencer_item.add_widget(rank_badge)
+                influencer_item.add_widget(info_layout)
+                influencer_item.add_widget(score_layout)
+                
+                # Add some spacing between items
+                item_container = MDBoxLayout(
+                    orientation="vertical",
+                    size_hint_y=None,
+                    height=dp(70),
+                    padding=dp(5)
+                )
+                item_container.add_widget(influencer_item)
+                influencers_card.add_widget(item_container)
+            
+            self.results_container.add_widget(influencers_card)
+        
         # Key Findings - REDUCED ELEVATION
         if analysis.get('key_findings'):
             findings_card = MDCard(
@@ -799,6 +1282,7 @@ class WelcomeScreen(MDScreen):
                 elevation=0,  # Reduced from 1
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
+            
             findings_title = MDLabel(
                 text="Key Insights",
                 font_style="H6",
@@ -880,7 +1364,7 @@ class WelcomeScreen(MDScreen):
                     padding=15,
                     size_hint_x=None,
                     width=100,
-                    elevation=2
+                    elevation=0  # Reduced elevation
                 )
                 
                 type_label = MDLabel(
@@ -1095,6 +1579,7 @@ class WelcomeScreen(MDScreen):
         )
         settings_dialog.open()
 
+
 class KrystalApp(MDApp):
     """Modern KivyMD application with enhanced UX"""
     
@@ -1103,14 +1588,14 @@ class KrystalApp(MDApp):
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
         
-        # Improve graphics performance
+        # Fix 4: Improve graphics performance
         from kivy.config import Config
         Config.set('graphics', 'multisamples', '0')  # Disable anti-aliasing for better performance
     
     def build(self):
         self.title = "Krystal - Power Structure Mapper"
         Window.clearcolor = (0.95, 0.95, 0.98, 1)
- 
+        
         # Create screen manager
         sm = MDScreenManager()
         
