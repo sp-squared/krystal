@@ -271,7 +271,7 @@ class AnalysisScreen(MDScreen):
         self.active_news_category = None
         self.current_analysis = None
         Clock.schedule_once(lambda dt: self.build_ui(), 0.1)
-    
+        
     def build_ui(self):
         main_layout = MDBoxLayout(
             orientation="vertical",
@@ -289,40 +289,40 @@ class AnalysisScreen(MDScreen):
         )
         main_layout.add_widget(self.top_bar)
         
-        # Static Content Section (doesn't scroll)
+        # Static Content Section (doesn't scroll) - Reduced height
         static_content = MDBoxLayout(
             orientation="vertical",
             size_hint_y=None,
-            height="420dp",  # Fixed height for static content
+            height="320dp",  # Reduced from 420dp to 320dp
             padding="16dp",
-            spacing="20dp"
+            spacing="16dp"  # Reduced spacing
         )
         
-        # Input Section
+        # Input Section - More compact
         input_layout = MDBoxLayout(
             orientation="vertical",
-            spacing="12dp"
+            spacing="10dp"
         )
         
         input_title = MDLabel(
             text="Analyze Power Structures",
             font_style="H6",
             size_hint_y=None,
-            height="40dp"
+            height="32dp"  # Reduced height
         )
         
         self.url_input = MDTextField(
             hint_text="Enter news URL or search terms...",
             icon_left="magnify",
             size_hint_y=None,
-            height="56dp"
+            height="48dp"  # Reduced height
         )
         
         analysis_layout = MDBoxLayout(
             orientation="horizontal",
-            spacing="8dp",
+            spacing="6dp",  # Reduced spacing
             size_hint_y=None,
-            height="48dp"
+            height="40dp"  # Reduced height
         )
         analysis_types = ["News", "Organization", "Person", "Topic"]
         
@@ -331,7 +331,7 @@ class AnalysisScreen(MDScreen):
             btn = MDRaisedButton(
                 text=text,
                 size_hint_x=None,
-                width="100dp"
+                width="90dp"  # Slightly smaller buttons
             )
             btn.bind(on_release=lambda x, t=text: self.set_analysis_type(x, t))
             analysis_layout.add_widget(btn)
@@ -342,14 +342,14 @@ class AnalysisScreen(MDScreen):
         
         category_layout = MDBoxLayout(
             orientation="horizontal",
-            spacing="8dp",
+            spacing="6dp",  # Reduced spacing
             size_hint_y=None,
-            height="48dp"
+            height="40dp"  # Reduced height
         )
         category_label = MDLabel(
             text="Category:",
             size_hint_x=None,
-            width="80dp"
+            width="70dp"  # Slightly smaller
         )
         category_layout.add_widget(category_label)
         
@@ -360,7 +360,7 @@ class AnalysisScreen(MDScreen):
             btn = MDRaisedButton(
                 text=category,
                 size_hint_x=None,
-                width="100dp"
+                width="90dp"  # Slightly smaller buttons
             )
             btn.bind(on_release=lambda x, c=category: self.set_news_category(x, c))
             category_layout.add_widget(btn)
@@ -371,9 +371,9 @@ class AnalysisScreen(MDScreen):
         
         button_layout = MDBoxLayout(
             orientation="horizontal",
-            spacing="12dp",
+            spacing="10dp",  # Reduced spacing
             size_hint_y=None,
-            height="56dp"
+            height="48dp"  # Reduced height
         )
         
         self.analyze_btn = MDRaisedButton(
@@ -398,12 +398,12 @@ class AnalysisScreen(MDScreen):
         input_layout.add_widget(button_layout)
         static_content.add_widget(input_layout)
         
-        # Progress Section (also static)
+        # Progress Section (also static) - More compact
         self.progress_layout = MDBoxLayout(
             orientation="vertical",
-            spacing="8dp",
+            spacing="6dp",  # Reduced spacing
             size_hint_y=None,
-            height="120dp"
+            height="80dp"  # Reduced from 120dp to 80dp
         )
         self.progress_layout.opacity = 0  # Initially hidden
         
@@ -411,13 +411,13 @@ class AnalysisScreen(MDScreen):
             text="Analysis Progress",
             font_style="H6",
             size_hint_y=None,
-            height="30dp"
+            height="24dp"  # Reduced height
         )
         
         self.status_label = MDLabel(
             text=self.status_text,
             size_hint_y=None,
-            height="30dp"
+            height="24dp"  # Reduced height
         )
         
         self.progress_bar = MDProgressBar(value=self.progress_value)
@@ -432,27 +432,31 @@ class AnalysisScreen(MDScreen):
         
         # Scrollable Content Section (only Analysis Results)
         self.content_scroll = MDScrollView()
+        
+        # Create a container for scrollable content with minimal initial height
         self.content_layout = MDBoxLayout(
             orientation="vertical", 
             size_hint_y=None,
             padding="16dp",
-            spacing="20dp"
+            spacing="16dp",
+            height="200dp"  # Initial minimal height
         )
         self.content_layout.bind(minimum_height=self.content_layout.setter('height'))
         
-        # Results Section (scrollable)
+        # Results Section (scrollable) - More compact title
         results_title = MDLabel(
             text="Analysis Results",
             font_style="H6",
             size_hint_y=None,
-            height="40dp"
+            height="32dp"  # Reduced height
         )
         self.content_layout.add_widget(results_title)
         
         self.results_container = MDBoxLayout(
             orientation="vertical",
-            spacing="16dp",
-            size_hint_y=None
+            spacing="12dp",  # Reduced spacing
+            size_hint_y=None,
+            height="100dp"  # Initial minimal height
         )
         self.content_layout.add_widget(self.results_container)
         
@@ -460,7 +464,7 @@ class AnalysisScreen(MDScreen):
         main_layout.add_widget(self.content_scroll)
         
         self.add_widget(main_layout)
-    
+
     def show_network_visualization(self, instance=None):
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
             self.show_message("Run an analysis first to see the network")
