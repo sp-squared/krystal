@@ -214,8 +214,9 @@ class AnalysisScreen(MDScreen):
     status_text = StringProperty("Ready to analyze power structures")
     is_analyzing = BooleanProperty(False)
 
+    
     def _ensure_entity_structure(self, entities):
-        """Ensure all entities have required fields for PowerMapper - FIXED VERSION"""
+        """Ensure all entities have required fields for PowerMapper - ENHANCED VERSION"""
         processed_entities = []
         
         for i, entity in enumerate(entities):
@@ -226,11 +227,9 @@ class AnalysisScreen(MDScreen):
             # Ensure ID exists and is a string
             if 'id' not in entity:
                 name = entity.get('name', f'entity_{i}')
-                entity['id'] = f"{name.lower().replace(' ', '_')}_{i}"
-            else:
-                # Convert ID to string if it's an integer
-                if isinstance(entity['id'], int):
-                    entity['id'] = str(entity['id'])
+                # Create a unique ID based on name and index
+                entity_id = f"{name.lower().replace(' ', '_')}_{i}_{hash(name) % 10000}"
+                entity['id'] = entity_id
             
             # Ensure name exists
             if 'name' not in entity:
@@ -240,12 +239,12 @@ class AnalysisScreen(MDScreen):
             if 'type' not in entity:
                 # Try to infer type from name or context
                 name_lower = entity['name'].lower()
-                if any(word in name_lower for word in ['corp', 'inc', 'ltd', 'company']):
+                if any(word in name_lower for word in ['corp', 'inc', 'ltd', 'company', 'group']):
                     entity['type'] = 'corporation'
-                elif any(word in name_lower for word in ['gov', 'agency', 'department', 'ministry']):
-                    entity['type'] = 'government'
-                elif any(word in name_lower for word in ['person', 'ceo', 'director', 'president']):
+                elif any(word in name_lower for word in ['ceo', 'president', 'director', 'executive']):
                     entity['type'] = 'person'
+                elif any(word in name_lower for word in ['gov', 'agency', 'department', 'administration']):
+                    entity['type'] = 'government'
                 else:
                     entity['type'] = 'organization'
                 
@@ -612,7 +611,7 @@ class AnalysisScreen(MDScreen):
             
         except Exception as e:
             self._analysis_error(str(e))
-            
+
     def _analysis_complete(self, query, category=None):
         """Handle analysis completion with category - FIXED VERSION"""
         try:
@@ -640,13 +639,13 @@ class AnalysisScreen(MDScreen):
             api_status = "🔴 Mock Data" if not self.news_client.is_api_available() else "🟢 Real News API"
             self.show_message(f"Using {api_status}")
             
-            # Extract entities from articles - FIXED: Pass the query parameter
+            # Extract entities from articles
             entities = []
             for article in articles:
                 # Combine title and content for entity extraction
                 text_content = f"{article.get('title', '')} {article.get('description', '')} {article.get('content', '')}"
                 if text_content.strip():
-                    # FIX: Pass the query parameter to extract_entities
+                    # Extract entities from article content
                     article_entities = self.news_client.extract_entities(text_content, query)
                     entities.extend(article_entities)
             
@@ -655,11 +654,16 @@ class AnalysisScreen(MDScreen):
                 if 'entities' in article and article['entities']:
                     entities.extend(article['entities'])
             
-            # Remove duplicates based on entity name
+            # Remove duplicates based on entity name and ensure structure
             unique_entities = {}
             for entity in entities:
                 name = entity.get('name', '')
                 if name and name not in unique_entities:
+                    # Ensure entity has basic structure
+                    if 'id' not in entity:
+                        entity['id'] = f"{name.lower().replace(' ', '_')}_{hash(name) % 10000}"
+                    if 'type' not in entity:
+                        entity['type'] = 'organization'
                     unique_entities[name] = entity
             
             entities = list(unique_entities.values())
@@ -671,17 +675,31 @@ class AnalysisScreen(MDScreen):
             # Get LittleSis entities based on the discovered entity names
             entity_names = [entity['name'] for entity in entities if 'name' in entity]
             ls_entities = self.littlesis_client.search_entities(entity_names)
+            
+            # Ensure LittleSis entities have proper structure
+            for entity in ls_entities:
+                if 'id' not in entity:
+                    name = entity.get('name', 'unknown')
+                    entity['id'] = f"ls_{name.lower().replace(' ', '_')}_{hash(name) % 10000}"
+            
             entities.extend(ls_entities)
             
-            # Remove duplicates again after adding LittleSis entities
-            unique_entities = {}
+            # Final cleanup - ensure all entities have IDs and remove duplicates
+            final_entities = []
+            seen_ids = set()
             for entity in entities:
-                name = entity.get('name', '')
-                if name and name not in unique_entities:
-                    unique_entities[name] = entity
+                # Ensure ID exists
+                if 'id' not in entity:
+                    name = entity.get('name', 'unknown')
+                    entity['id'] = f"final_{name.lower().replace(' ', '_')}_{hash(name) % 10000}"
+                
+                # Remove duplicates by ID
+                if entity['id'] not in seen_ids:
+                    final_entities.append(entity)
+                    seen_ids.add(entity['id'])
             
-            entities = list(unique_entities.values())
-            
+            entities = final_entities
+
             # Get relationships (with error handling)
             relationships = []
             for entity in entities[:5]:  # Limit to avoid too many API calls
@@ -735,37 +753,67 @@ class AnalysisScreen(MDScreen):
                 'description': f"Entity mentioned in search: {query}"
             })
         return entities
-
+    
     def _create_sample_relationships(self, entities):
-        """Create realistic sample relationships - ENHANCED VERSION"""
+        """Create sample relationships when no real ones are found - FIXED VERSION"""
         relationships = []
         
         if len(entities) < 2:
             return relationships
         
-        # Create a more connected network
-        for i in range(len(entities)):
-            for j in range(i + 1, min(i + 3, len(entities))):  # Connect each node to up to 2 others
+        # Create a small network with the most relevant entities
+        for i in range(min(5, len(entities))):
+            for j in range(i + 1, min(i + 3, len(entities))):
                 if i == j:
                     continue
                     
-                # Create different relationship types
-                rel_types = [
-                    ("business_partner", 0.7),
-                    ("colleague", 0.6), 
-                    ("influences", 0.8),
-                    ("funds", 0.9),
-                    ("advises", 0.5)
-                ]
+                # Ensure both entities have IDs, generate if missing
+                entity1 = entities[i]
+                entity2 = entities[j]
                 
-                rel_type, strength = rel_types[(i + j) % len(rel_types)]
+                # Get or generate IDs for both entities
+                entity1_id = entity1.get('id')
+                if not entity1_id:
+                    entity1_id = f"entity_{i}_{hash(entity1.get('name', str(i)))}"
+                    entity1['id'] = entity1_id
                 
+                entity2_id = entity2.get('id') 
+                if not entity2_id:
+                    entity2_id = f"entity_{j}_{hash(entity2.get('name', str(j)))}"
+                    entity2['id'] = entity2_id
+                
+                # Determine relationship type based on entity types
+                type1 = entity1.get('type', 'organization')
+                type2 = entity2.get('type', 'organization')
+                
+                # Create appropriate relationship based on entity types
+                if type1 == 'person' and type2 == 'corporation':
+                    rel_type = 'board_member'
+                    strength = 0.8
+                    description = f"{entity1['name']} serves on board of {entity2['name']}"
+                elif type1 == 'corporation' and type2 == 'corporation':
+                    rel_type = 'partnership'
+                    strength = 0.6
+                    description = f"{entity1['name']} partners with {entity2['name']}"
+                elif type1 == 'government' and type2 == 'corporation':
+                    rel_type = 'regulation'
+                    strength = 0.7
+                    description = f"{entity1['name']} regulates {entity2['name']}"
+                elif type1 == 'person' and type2 == 'person':
+                    rel_type = 'colleague'
+                    strength = 0.5
+                    description = f"{entity1['name']} works with {entity2['name']}"
+                else:
+                    rel_type = 'connected_to'
+                    strength = 0.5
+                    description = f"{entity1['name']} connected to {entity2['name']}"
+                    
                 relationships.append({
-                    'source': str(entities[i]['id']),
-                    'target': str(entities[j]['id']),
+                    'source': str(entity1_id),
+                    'target': str(entity2_id),
                     'type': rel_type,
                     'relationship': rel_type,
-                    'description': f"{entities[i]['name']} {rel_type.replace('_', ' ')} {entities[j]['name']}",
+                    'description': description,
                     'strength': strength
                 })
         
