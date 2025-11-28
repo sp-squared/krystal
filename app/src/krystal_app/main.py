@@ -16,9 +16,6 @@ from kivy.uix.widget import Widget
 import math
 import re
 
-
-
-
 # KivyMD Components
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -37,7 +34,6 @@ from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.selectioncontrol import MDCheckbox
 from kivymd.uix.slider import MDSlider
-from kivymd.uix.icon import MDIcon
 
 # Core functionality
 from krystal.power_mapper import PowerMapper, create_sample_network
@@ -164,6 +160,7 @@ class NetworkGraphWidget(Widget):
         )
         popup.open()
 
+
 class WelcomeScreen(MDScreen):
     def build_ui(self):
         # Main layout with gradient background
@@ -181,13 +178,13 @@ class WelcomeScreen(MDScreen):
             size_hint_y=0.4
         )
         
-        # App icon - Replace 🔍 with magnify icon
-        self.icon_label = MDIcon(
+        # App icon - Using MDIconButton as a workaround
+        self.icon_label = MDIconButton(
             icon="magnify",
             theme_text_color="Custom",
             text_color=[0.2, 0.5, 0.8, 1],
-            halign="center",
-            font_size="64sp"
+            user_font_size="64sp",
+            disabled=True  # Make it non-interactive
         )
         
         # App title
@@ -232,7 +229,7 @@ class WelcomeScreen(MDScreen):
         
         features_list = MDBoxLayout(orientation="vertical", spacing=dp(10))
         
-        # Replace emojis with Material Icons
+        # Using MDIconButton for icons since MDIcon is not available
         features = [
             ("magnify", "Analyze news articles for power structures"),
             ("chart-box", "Visualize relationship networks"),
@@ -242,10 +239,12 @@ class WelcomeScreen(MDScreen):
         
         for icon, text in features:
             feature_item = MDBoxLayout(orientation="horizontal", spacing=dp(15))
-            icon_widget = MDIcon(
+            icon_widget = MDIconButton(
                 icon=icon,
                 theme_text_color="Primary",
-                size_hint_x=0.2
+                size_hint_x=0.2,
+                disabled=True,
+                user_font_size="24sp"
             )
             text_label = MDLabel(
                 text=text,
@@ -954,7 +953,7 @@ class AnalysisScreen(MDScreen):
             
             viz_layout = MDBoxLayout(orientation="horizontal", adaptive_height=True)
             
-            # Icon mapping for entity types
+            # Using MDIconButton for entity type icons since MDIcon is not available
             type_icons = {
                 'person': "account",
                 'corporation': "office-building", 
@@ -970,12 +969,13 @@ class AnalysisScreen(MDScreen):
                     spacing=dp(5)
                 )
                 
-                # Use Material Icon instead of colored dot
-                icon_widget = MDIcon(
+                # Use MDIconButton as a workaround for MDIcon
+                icon_widget = MDIconButton(
                     icon=type_icons.get(entity_type, "help-circle"),
                     theme_text_color="Primary",
-                    font_size="24sp",
-                    halign="center"
+                    user_font_size="24sp",
+                    disabled=True,
+                    size_hint=(1, 0.6)
                 )
                 
                 count_label = MDLabel(
@@ -1096,7 +1096,7 @@ class AnalysisScreen(MDScreen):
                 elevation=1
             )
             
-            # Use Material Icons for stats
+            # Using MDIconButton for stats icons
             stats = [
                 ("account-multiple", f"{summary.get('entity_count', 0)}", "Entities"),
                 ("link", f"{summary.get('relationship_count', 0)}", "Relationships"),
@@ -1107,12 +1107,13 @@ class AnalysisScreen(MDScreen):
             for icon, value, label in stats:
                 stat_item = MDBoxLayout(orientation="vertical")
                 
-                # Icon
-                icon_widget = MDIcon(
+                # Using MDIconButton as icon workaround
+                icon_widget = MDIconButton(
                     icon=icon,
                     theme_text_color="Primary",
-                    halign="center",
-                    font_size="20sp"
+                    user_font_size="20sp",
+                    disabled=True,
+                    size_hint=(1, 0.6)
                 )
                 
                 value_label = MDLabel(
@@ -1166,7 +1167,7 @@ class AnalysisScreen(MDScreen):
         else:
             # Fallback: show entity distribution
             viz_label = MDLabel(
-                text="🌐 Power Network Structure",
+                text="Power Network Structure",
                 font_style="H6",
                 halign="center",
                 size_hint_y=None,
