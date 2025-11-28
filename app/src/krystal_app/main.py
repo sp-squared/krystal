@@ -729,13 +729,24 @@ class AnalysisScreen(MDScreen):
         self.url_input.text = "technology sector influence"
         self.analyze_article(None)
     
-
     def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data"):
-        """Display beautiful analysis results with API status - ENHANCED VERSION"""
+        """Display beautiful analysis results with API status - FIXED VERSION"""
+        
+        # Safely extract source information
+        source_name = "Unknown"
+        try:
+            source_data = article.get('source', {})
+            if isinstance(source_data, dict):
+                source_name = source_data.get('name', 'Unknown')
+            else:
+                source_name = str(source_data)  # Handle case where source is a string
+        except:
+            source_name = "Unknown"
+        
         # Article header with API status
         article_item = TwoLineListItem(
             text=article.get('title', 'Analysis Results'),
-            secondary_text=f"Source: {article.get('source', {}).get('name', 'Unknown')} | {api_status}",
+            secondary_text=f"Source: {source_name} | {api_status}",
             bg_color=[0.95, 0.95, 0.98, 1]
         )
         self.results_layout.add_widget(article_item)
@@ -784,7 +795,7 @@ class AnalysisScreen(MDScreen):
             for finding in analysis['key_findings'][:3]:
                 finding_item = OneLineListItem(text=f"• {finding}")
                 self.results_layout.add_widget(finding_item)
-                
+    
     def show_message(self, message):
         """Show a message to the user"""
         # Simple message display
