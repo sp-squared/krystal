@@ -3,10 +3,9 @@ Krystal Mobile Application - Modern Power Structure Mapping Interface
 GPL v3
 """
 
-import kivy
+from kivy.graphics import Color, Line, Ellipse
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.graphics import Color, Line, Ellipse
 from kivy.uix.widget import Widget
 from kivy.properties import NumericProperty, StringProperty, BooleanProperty
 from kivy.core.window import Window
@@ -91,7 +90,7 @@ class NetworkGraphWidget(Widget):
                 
                 Color(*color)
                 Ellipse(pos=(x-15, y-15), size=(30, 30))
-                
+
 class WelcomeScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -107,7 +106,7 @@ class WelcomeScreen(MDScreen):
         #self.content_layout = MDBoxLayout(
             #orientation="vertical", 
             #size_hint_y=None,
-            #adding="10dp",
+            #padding="10dp",
             #spacing="10dp"
 
         main_layout = MDBoxLayout(orientation="vertical")
