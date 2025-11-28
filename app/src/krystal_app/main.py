@@ -166,7 +166,194 @@ class WelcomeScreen(MDScreen):
         super().__init__(**kwargs)
         self.name = 'welcome'
         self.build_ui()
+    
+    def build_ui(self):
+        # Main layout with gradient background
+        main_layout = MDBoxLayout(
+            orientation="vertical",
+            padding=dp(40),
+            spacing=dp(30),
+            md_bg_color=[0.95, 0.95, 0.98, 1]
+        )
+        
+        # Header section
+        header_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing=dp(20),
+            size_hint_y=0.4
+        )
+        
+        # App icon - Using MDIconButton as a workaround
+        self.icon_label = MDIconButton(
+            icon="magnify",
+            theme_text_color="Custom",
+            text_color=[0.2, 0.5, 0.8, 1],
+            font_size="64sp",
+            disabled=True  # Make it non-interactive
+        )
+        
+        # App title
+        title_layout = MDBoxLayout(orientation="vertical", spacing=dp(5))
+        title_label = MDLabel(
+            text="KRYSTAL",
+            font_style="H4",
+            bold=True,
+            theme_text_color="Custom",
+            text_color=[0.1, 0.3, 0.6, 1],
+            halign="center"
+        )
+        subtitle_label = MDLabel(
+            text="Power Structure Mapper",
+            font_style="Subtitle1",
+            theme_text_color="Secondary",
+            halign="center"
+        )
+        
+        title_layout.add_widget(title_label)
+        title_layout.add_widget(subtitle_label)
+        
+        header_layout.add_widget(self.icon_label)
+        header_layout.add_widget(title_layout)
+        
+        # Features section
+        features_card = MDCard(
+            orientation="vertical",
+            padding=dp(20),
+            spacing=dp(15),
+            size_hint_y=0.4,
+            elevation=2,
+            radius=[dp(15), dp(15), dp(15), dp(15)]
+        )
+        
+        features_title = MDLabel(
+            text="Discover Hidden Connections",
+            font_style="H6",
+            theme_text_color="Primary",
+            halign="center"
+        )
+        
+        features_list = MDBoxLayout(orientation="vertical", spacing=dp(10))
+        
+        # Using MDIconButton for icons since MDIcon is not available
+        features = [
+            ("magnify", "Analyze news articles for power structures"),
+            ("chart-box", "Visualize relationship networks"),
+            ("office-building", "Track corporate and government ties"),
+            ("lock", "Privacy-first, no data collection")
+        ]
+        
+        for icon, text in features:
+            feature_item = MDBoxLayout(orientation="horizontal", spacing=dp(15))
+            icon_widget = MDIconButton(
+                icon=icon,
+                theme_text_color="Primary",
+                size_hint_x=0.2,
+                disabled=True,
+                font_size="24sp"
+            )
+            text_label = MDLabel(
+                text=text,
+                font_style="Body2",
+                theme_text_color="Secondary",
+                size_hint_x=0.8
+            )
+            feature_item.add_widget(icon_widget)
+            feature_item.add_widget(text_label)
+            features_list.add_widget(feature_item)
+        
+        features_card.add_widget(features_title)
+        features_card.add_widget(features_list)
 
+        # Action buttons
+        action_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing=dp(15),
+            size_hint_y=0.2
+        )
+        
+        self.start_button = MDRaisedButton(
+            text="Start Analysis",
+            size_hint_y=None,
+            height=dp(50),
+            md_bg_color=[0.2, 0.6, 0.8, 1],
+            elevation=4
+        )
+        self.start_button.bind(on_press=self.start_analysis)
+        
+        sample_button = MDFlatButton(
+            text="Try Sample Data",
+            size_hint_y=None,
+            height=dp(40),
+            theme_text_color="Custom",
+            text_color=[0.2, 0.6, 0.8, 1]
+        )
+        sample_button.bind(on_press=self.show_sample)
+        
+        action_layout.add_widget(self.start_button)
+        action_layout.add_widget(sample_button)
+        
+        # Assemble main layout
+        main_layout.add_widget(header_layout)
+        main_layout.add_widget(features_card)
+        main_layout.add_widget(action_layout)
+        
+        self.add_widget(main_layout)
+    
+    def start_analysis(self, instance):
+        """Navigate to analysis screen"""
+        self.manager.current = 'analysis'
+    
+    def show_sample(self, instance):
+        """Show sample data preview"""
+        sample_dialog = MDDialog(
+            title="Sample Analysis",
+            text="This will load a demonstration with sample power structure data showing how Krystal analyzes relationships between corporations, government entities, and influential organizations.",
+            buttons=[
+                MDFlatButton(
+                    text="Cancel",
+                    theme_text_color="Custom",
+                    text_color=[0.5, 0.5, 0.5, 1],
+                    on_release=lambda x: sample_dialog.dismiss()
+                ),
+                MDRaisedButton(
+                    text="Load Sample",
+                    md_bg_color=[0.2, 0.6, 0.8, 1],
+                    on_release=lambda x: self.load_sample_data(sample_dialog)
+                ),
+            ],
+        )
+        sample_dialog.open()
+    
+    def load_sample_data(self, dialog):
+        """Load sample data and navigate to analysis"""
+        dialog.dismiss()
+        self.manager.current = 'analysis'
+        analysis_screen = self.manager.get_screen('analysis')
+        Clock.schedule_once(lambda dt: analysis_screen.load_sample_data(), 0.5)
+
+
+class AnalysisScreen(MDScreen):
+    """Modern analysis screen with enhanced UX and News API integration"""
+    
+    progress_value = NumericProperty(0)
+    status_text = StringProperty("Ready to analyze power structures")
+    is_analyzing = BooleanProperty(False)
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "analysis"
+        
+        # Initialize core components
+        self.mapper = PowerMapper()
+        self.news_client = NewsClient()
+        self.littlesis_client = LittleSisClient()
+        
+        self.dialog = None
+        self.active_analysis_type = "News"
+        self.active_news_category = None
+        self.current_analysis = None
+        Clock.schedule_once(lambda dt: self.build_ui(), 0.1)
+    
     def build_ui(self):
         # Main layout
         main_layout = MDBoxLayout(orientation="vertical")
@@ -199,7 +386,7 @@ class WelcomeScreen(MDScreen):
             elevation=2,
             radius=[dp(15), dp(15), dp(15), dp(15)],
             size_hint_y=None,
-            height=dp(300)  # Fixed height for input section
+            height=dp(300)
         )
         
         input_title = MDLabel(
@@ -272,7 +459,8 @@ class WelcomeScreen(MDScreen):
             self.category_buttons.append(btn)
         
         # Set "All" as default category
-        self.set_news_category(self.category_buttons[0], "All")
+        if self.category_buttons:
+            self.set_news_category(self.category_buttons[0], "All")
         
         category_layout.add_widget(category_label)
         category_layout.add_widget(category_buttons_layout)
@@ -305,6 +493,39 @@ class WelcomeScreen(MDScreen):
         input_card.add_widget(button_layout)
         content_layout.add_widget(input_card)
         
+        # Progress Card
+        self.progress_card = MDCard(
+            orientation="vertical",
+            padding=dp(20),
+            spacing=dp(15),
+            elevation=2,
+            radius=[dp(15), dp(15), dp(15), dp(15)],
+            opacity=0,
+            size_hint_y=None,
+            height=dp(120)
+        )
+        
+        progress_title = MDLabel(
+            text="Analysis Progress",
+            font_style="H6",
+            theme_text_color="Primary"
+        )
+        
+        self.status_label = MDLabel(
+            text=self.status_text,
+            font_style="Body1",
+            theme_text_color="Secondary"
+        )
+        
+        self.progress_bar = MDProgressBar(
+            value=self.progress_value,
+        )
+        
+        self.progress_card.add_widget(progress_title)
+        self.progress_card.add_widget(self.status_label)
+        self.progress_card.add_widget(self.progress_bar)
+        content_layout.add_widget(self.progress_card)
+        
         # Results Section - DIRECTLY BELOW INPUT
         results_title = MDLabel(
             text="Analysis Results",
@@ -329,9 +550,9 @@ class WelcomeScreen(MDScreen):
         main_layout.add_widget(self.content_scroll)
         
         self.add_widget(main_layout)
-
+    
     def extract_keywords_from_url(self, url: str) -> str:
-        """Extract meaningful keywords from a URL for news search - ENHANCED VERSION"""
+        """Extract meaningful keywords from a URL for news search"""
         try:
             print(f"🔗 Processing URL: {url}")
             
@@ -446,7 +667,7 @@ class WelcomeScreen(MDScreen):
         self.progress_card.opacity = 1
         
         # Clear previous results
-        self.results_layout.clear_widgets()
+        self.results_container.clear_widgets()
         
         # Add initial status item with context about what we're analyzing
         if is_url:
@@ -461,7 +682,7 @@ class WelcomeScreen(MDScreen):
             text=status_text,
             secondary_text=secondary_text
         )
-        self.results_layout.add_widget(initial_item)
+        self.results_container.add_widget(initial_item)
         
         # Start analysis process with category
         Clock.schedule_once(lambda dt: self._perform_analysis(query, category), 0.5)
@@ -485,8 +706,8 @@ class WelcomeScreen(MDScreen):
                     
                     # Update the status in results list
                     if step_index > 0:
-                        self.results_layout.children[0].text = status
-                        self.results_layout.children[0].secondary_text = f"Progress: {progress}%"
+                        self.results_container.children[0].text = status
+                        self.results_container.children[0].secondary_text = f"Progress: {progress}%"
                     
                     # Schedule next step
                     Clock.schedule_once(lambda dt: update_step(step_index + 1), 1)
@@ -657,7 +878,7 @@ class WelcomeScreen(MDScreen):
             self.current_analysis = analysis
             
             # Clear loading item and display results with URL context
-            self.results_layout.clear_widgets()
+            self.results_container.clear_widgets()
             self.display_analysis_results(analysis, articles[0], api_status, 
                                         original_url=original_query if is_url else None,
                                         extracted_topic=extracted_topic if is_url else None)
@@ -675,7 +896,7 @@ class WelcomeScreen(MDScreen):
             import traceback
             traceback.print_exc()
             self._analysis_error(f"Analysis failed: {str(e)}")
-
+    
     def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data", 
                             original_url=None, extracted_topic=None):
         """Display beautiful analysis results in the results container"""
@@ -1094,7 +1315,7 @@ class WelcomeScreen(MDScreen):
         
         # Add a final spacer to ensure everything is visible
         self.results_container.add_widget(MDBoxLayout(size_hint_y=None, height=dp(20)))
-
+    
     def show_network_visualization(self, instance=None):
         """Show interactive network visualization"""
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
@@ -1298,12 +1519,12 @@ class WelcomeScreen(MDScreen):
         self.analyze_btn.disabled = False
         self.analyze_btn.text = "Start Analysis"
         
-        self.results_layout.clear_widgets()
+        self.results_container.clear_widgets()
         error_item = TwoLineListItem(
             text="Analysis Failed",
             secondary_text=error_msg
         )
-        self.results_layout.add_widget(error_item)
+        self.results_container.add_widget(error_item)
         
         self.show_message("Analysis failed - please try again")
     
