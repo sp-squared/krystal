@@ -627,7 +627,6 @@ class NewsClient:
         """Check if real NewsAPI is available"""
         return self.use_real_api
 
-
 class OpenSecretsClient:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv('OPENSECRETS_API_KEY')
@@ -657,11 +656,10 @@ class OpenSecretsClient:
         }
     
 # Utility function to initialize all data sources
-def create_data_sources(news_api_key: str = None, littlesis_api_key: str = None, 
-                       opensecrets_api_key: str = None) -> Dict:
+def create_data_sources(news_api_key: str = None, opensecrets_api_key: str = None) -> Dict:
     """Convenience function to create all data source clients"""
     return {
         'news': NewsClient(news_api_key),
-        'littlesis': LittleSisClient(littlesis_api_key),
+        'littlesis': LittleSisClient(),  # No API key needed
         'opensecrets': OpenSecretsClient(opensecrets_api_key)
     }
