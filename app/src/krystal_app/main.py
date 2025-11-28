@@ -107,174 +107,6 @@ class WelcomeScreen(MDScreen):
     def build_ui(self):
         main_layout = MDBoxLayout(
             orientation="vertical",
-            padding="20dp",
-            spacing="20dp"
-        )
-        
-        header_layout = MDBoxLayout(
-            orientation="vertical",
-            spacing="10dp"
-        )
-        
-        self.icon_label = MDIconButton(
-            icon="magnify",
-            disabled=True,
-            size_hint=(None, None),
-            size=("64dp", "64dp")
-        )
-        
-        title_layout = MDBoxLayout(
-            orientation="vertical",
-            spacing="5dp"
-        )
-        title_label = MDLabel(
-            text="KRYSTAL",
-            font_style="H4",
-            halign="center",
-            size_hint_y=None,
-            height="40dp"
-        )
-        subtitle_label = MDLabel(
-            text="Power Structure Mapper",
-            font_style="Subtitle1",
-            halign="center",
-            size_hint_y=None,
-            height="30dp"
-        )
-        
-        title_layout.add_widget(title_label)
-        title_layout.add_widget(subtitle_label)
-        
-        header_layout.add_widget(self.icon_label)
-        header_layout.add_widget(title_layout)
-    
-        features_layout = MDBoxLayout(
-            orientation="vertical",
-            spacing="15dp"
-        )
-        
-        features_title = MDLabel(
-            text="Discover Hidden Connections",
-            font_style="H6",
-            halign="center",
-            size_hint_y=None,
-            height="35dp"
-        )
-        
-        features_list = MDBoxLayout(
-            orientation="vertical",
-            spacing="10dp"
-        )
-        
-        features = [
-            ("magnify", "Analyze news articles for power structures"),
-            ("chart-box", "Visualize relationship networks"),
-            ("office-building", "Track corporate and government ties"),
-            ("lock", "Privacy-first, no data collection")
-        ]
-        
-        for icon, text in features:
-            feature_item = MDBoxLayout(
-                orientation="horizontal",
-                spacing="10dp",
-                size_hint_y=None,
-                height="40dp"
-            )
-            icon_widget = MDIconButton(
-                icon=icon,
-                disabled=True,
-                size_hint=(None, None),
-                size=("40dp", "40dp")
-            )
-            text_label = MDLabel(
-                text=text,
-                font_style="Body2"
-            )
-
-            feature_item.add_widget(icon_widget)
-            feature_item.add_widget(text_label)
-            features_list.add_widget(feature_item)
-        
-        features_layout.add_widget(features_title)
-        features_layout.add_widget(features_list)
-
-        action_layout = MDBoxLayout(
-            orientation="vertical",
-            padding="20dp",
-            spacing="15dp"
-        )
-        
-        self.start_button = MDRaisedButton(
-            text="Start Analysis",
-            size_hint=(1, None),
-            height="48dp"
-        )
-        self.start_button.bind(on_press=self.start_analysis)
-        
-        sample_button = MDFlatButton(
-            text="Try Sample Data",
-            size_hint=(1, None),
-            height="48dp"
-        )
-        sample_button.bind(on_press=self.show_sample)
-        
-        action_layout.add_widget(self.start_button)
-        action_layout.add_widget(sample_button)
-        
-        main_layout.add_widget(header_layout)
-        main_layout.add_widget(features_layout)
-        main_layout.add_widget(action_layout)
-        
-        self.add_widget(main_layout)
-    
-    def start_analysis(self, instance):
-        self.manager.current = 'analysis'
-    
-    def show_sample(self, instance):
-        sample_dialog = MDDialog(
-            title="Sample Analysis",
-            text="This will load a demonstration with sample power structure data.",
-            buttons=[
-                MDFlatButton(
-                    text="Cancel",
-                    on_release=lambda x: sample_dialog.dismiss()
-                ),
-                MDRaisedButton(
-                    text="Load Sample",
-                    on_release=lambda x: self.load_sample_data(sample_dialog)
-                ),
-            ],
-        )
-        sample_dialog.open()
-    
-    def load_sample_data(self, dialog):
-        dialog.dismiss()
-        self.manager.current = 'analysis'
-        analysis_screen = self.manager.get_screen('analysis')
-        Clock.schedule_once(lambda dt: analysis_screen.load_sample_data(), 0.5)
-
-
-class AnalysisScreen(MDScreen):
-    progress_value = NumericProperty(0)
-    status_text = StringProperty("Ready to analyze power structures")
-    is_analyzing = BooleanProperty(False)
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.name = "analysis"
-        
-        self.mapper = PowerMapper()
-        self.news_client = NewsClient()
-        self.littlesis_client = LittleSisClient()
-        
-        self.active_analysis_type = "News"
-        self.active_news_category = None
-        self.current_analysis = None
-        Clock.schedule_once(lambda dt: self.build_ui(), 0.1)
-    
-    def build_ui(self):
-        main_layout = MDBoxLayout(
-            orientation="vertical",
             padding="0dp",
             spacing="0dp"
         )
@@ -289,41 +121,46 @@ class AnalysisScreen(MDScreen):
         )
         main_layout.add_widget(self.top_bar)
         
-        # All content in one scrollable area
-        self.content_scroll = MDScrollView()
+        # All content in one scrollable area that takes remaining space
+        self.content_scroll = MDScrollView(
+            size_hint=(1, 1)  # Take all available space
+        )
         self.content_layout = MDBoxLayout(
             orientation="vertical", 
             size_hint_y=None,
             padding="16dp",
-            spacing="20dp"
+            spacing="20dp",
+            height="800dp"  # Set a minimum height that's larger than screen
         )
         self.content_layout.bind(minimum_height=self.content_layout.setter('height'))
         
-        # Input Section
+        # Input Section - More compact
         input_layout = MDBoxLayout(
             orientation="vertical",
-            spacing="12dp"
+            spacing="10dp",
+            size_hint_y=None,
+            height="260dp"  # Fixed height for input section
         )
         
         input_title = MDLabel(
             text="Analyze Power Structures",
             font_style="H6",
             size_hint_y=None,
-            height="40dp"
+            height="32dp"
         )
         
         self.url_input = MDTextField(
             hint_text="Enter news URL or search terms...",
             icon_left="magnify",
             size_hint_y=None,
-            height="56dp"
+            height="48dp"
         )
         
         analysis_layout = MDBoxLayout(
             orientation="horizontal",
-            spacing="8dp",
+            spacing="6dp",
             size_hint_y=None,
-            height="48dp"
+            height="40dp"
         )
         analysis_types = ["News", "Organization", "Person", "Topic"]
         
@@ -332,7 +169,7 @@ class AnalysisScreen(MDScreen):
             btn = MDRaisedButton(
                 text=text,
                 size_hint_x=None,
-                width="100dp"
+                width="90dp"
             )
             btn.bind(on_release=lambda x, t=text: self.set_analysis_type(x, t))
             analysis_layout.add_widget(btn)
@@ -343,14 +180,14 @@ class AnalysisScreen(MDScreen):
         
         category_layout = MDBoxLayout(
             orientation="horizontal",
-            spacing="8dp",
+            spacing="6dp",
             size_hint_y=None,
-            height="48dp"
+            height="40dp"
         )
         category_label = MDLabel(
             text="Category:",
             size_hint_x=None,
-            width="80dp"
+            width="70dp"
         )
         category_layout.add_widget(category_label)
         
@@ -361,7 +198,7 @@ class AnalysisScreen(MDScreen):
             btn = MDRaisedButton(
                 text=category,
                 size_hint_x=None,
-                width="100dp"
+                width="90dp"
             )
             btn.bind(on_release=lambda x, c=category: self.set_news_category(x, c))
             category_layout.add_widget(btn)
@@ -372,9 +209,9 @@ class AnalysisScreen(MDScreen):
         
         button_layout = MDBoxLayout(
             orientation="horizontal",
-            spacing="12dp",
+            spacing="10dp",
             size_hint_y=None,
-            height="56dp"
+            height="48dp"
         )
         
         self.analyze_btn = MDRaisedButton(
@@ -399,12 +236,12 @@ class AnalysisScreen(MDScreen):
         input_layout.add_widget(button_layout)
         self.content_layout.add_widget(input_layout)
         
-        # Progress Section
+        # Progress Section - More compact
         self.progress_layout = MDBoxLayout(
             orientation="vertical",
-            spacing="8dp",
+            spacing="6dp",
             size_hint_y=None,
-            height="120dp"
+            height="80dp"
         )
         self.progress_layout.opacity = 0  # Initially hidden
         
@@ -412,13 +249,13 @@ class AnalysisScreen(MDScreen):
             text="Analysis Progress",
             font_style="H6",
             size_hint_y=None,
-            height="30dp"
+            height="24dp"
         )
         
         self.status_label = MDLabel(
             text=self.status_text,
             size_hint_y=None,
-            height="30dp"
+            height="24dp"
         )
         
         self.progress_bar = MDProgressBar(value=self.progress_value)
@@ -428,19 +265,20 @@ class AnalysisScreen(MDScreen):
         self.progress_layout.add_widget(self.progress_bar)
         self.content_layout.add_widget(self.progress_layout)
         
-        # Results Section - Now directly below the buttons in the scrollable area
+        # Results Section - More compact initial state
         results_title = MDLabel(
             text="Analysis Results",
             font_style="H6",
             size_hint_y=None,
-            height="40dp"
+            height="32dp"
         )
         self.content_layout.add_widget(results_title)
         
         self.results_container = MDBoxLayout(
             orientation="vertical",
-            spacing="16dp",
-            size_hint_y=None
+            spacing="12dp",
+            size_hint_y=None,
+            height="200dp"  # Initial minimal height
         )
         self.content_layout.add_widget(self.results_container)
         
@@ -448,7 +286,7 @@ class AnalysisScreen(MDScreen):
         main_layout.add_widget(self.content_scroll)
         
         self.add_widget(main_layout)
-    
+
     def show_network_visualization(self, instance=None):
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
             self.show_message("Run an analysis first to see the network")
