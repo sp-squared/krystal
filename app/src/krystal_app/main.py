@@ -1334,14 +1334,14 @@ class AnalysisScreen(MDScreen):
         
         # Add a final spacer to ensure everything is visible
         self.results_container.add_widget(MDBoxLayout(size_hint_y=None, height=dp(20)))
-
+        
     def show_network_visualization(self, instance=None):
-        """Show interactive network visualization"""
+        """Show interactive network visualization using ModalView to prevent shadows"""
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
             self.show_message("Run an analysis first to see the network")
             return
         
-        # Create visualization dialog
+        # Create visualization content
         content = MDBoxLayout(orientation='vertical', size_hint_y=None)
         content.height = 500
         
@@ -1399,23 +1399,62 @@ class AnalysisScreen(MDScreen):
             
             content.add_widget(type_layout)
         
-        # FIX: Create dialog with transparent background and no shadow
-        self.viz_dialog = MDDialog(
-            title="Network Visualization",
-            type="custom",
-            content_cls=content,
+        # FIX 5: Use ModalView instead of MDDialog to prevent shadow artifacts
+        from kivy.uix.modalview import ModalView
+        
+        # Create modal with transparent background
+        self.viz_modal = ModalView(
             size_hint=(0.9, 0.8),
-            elevation=0,
-            md_bg_color=[1, 1, 1, 1],  # Solid white background
-            overlay_color=[0, 0, 0, 0.2],  # Very light overlay
-            background_color=[1, 1, 1, 1],  # Remove dialog background
+            background_color=[0, 0, 0, 0],  # Fully transparent background
+            overlay_color=[0, 0, 0, 0.3],   # Light overlay
+            background=''  # Remove default background image
         )
         
-        # FIX: Remove any shadow from the dialog
-        self.viz_dialog.ids.container.shadow_color = [0, 0, 0, 0]
-        self.viz_dialog.ids.container.elevation = 0
+        # Create main container with white background
+        main_container = MDCard(
+            orientation='vertical',
+            elevation=0,  # No shadow
+            radius=[dp(15), dp(15), dp(15), dp(15)],
+            md_bg_color=[1, 1, 1, 1],  # Solid white
+            size_hint=(1, 1)
+        )
         
-        self.viz_dialog.open()
+        # Create custom title bar
+        title_layout = MDBoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(60),
+            md_bg_color=[0.2, 0.6, 0.8, 1],
+            padding=dp(10),
+            radius=[dp(15), dp(15), 0, 0]
+        )
+        
+        title_label = MDLabel(
+            text="Network Visualization",
+            font_style="H6", 
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            halign="left",
+            size_hint_x=0.9
+        )
+        
+        close_btn = MDIconButton(
+            icon="close",
+            theme_text_color="Custom",
+            text_color=[1, 1, 1, 1],
+            on_release=lambda x: self.viz_modal.dismiss()
+        )
+        
+        title_layout.add_widget(title_label)
+        title_layout.add_widget(close_btn)
+        
+        # Add title and content to main container
+        main_container.add_widget(title_layout)
+        main_container.add_widget(content)
+        
+        # Add main container to modal
+        self.viz_modal.add_widget(main_container)
+        self.viz_modal.open()
 
     def _close_viz_dialog(self, instance):
         """Properly close visualization dialog to prevent shadow artifacts"""
