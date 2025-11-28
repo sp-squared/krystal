@@ -16,6 +16,9 @@ from kivy.uix.widget import Widget
 import math
 import re
 
+
+
+
 # KivyMD Components
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -26,7 +29,7 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDFlatButton, MDRoundFlatButton, MDIconButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.progressbar import MDProgressBar
-from kivymd.uix.list import MDList, OneLineListItem, OneLineIconListItem, TwoLineListItem, OneLineAvatarIconListItem
+from kivymd.uix.list import MDList, OneLineListItem, TwoLineListItem
 from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.navigationdrawer import MDNavigationDrawer
 from kivymd.uix.screen import MDScreen
@@ -1124,20 +1127,19 @@ class AnalysisScreen(MDScreen):
                 stats_card.add_widget(stat_item)
             
             self.results_layout.add_widget(stats_card)
-        
+
         # Key findings
         if analysis.get('key_findings'):
             findings_header = OneLineListItem(text="🔍 Key Findings")
             self.results_layout.add_widget(findings_header)
             
             for finding in analysis['key_findings'][:3]:
-                finding_item = OneLineIconListItem(
-                    text=f"• {finding}",
-                    icon="check"
+                finding_item = OneLineListItem(
+                    text=f"✓ {finding}"
                 )
                 self.results_layout.add_widget(finding_item)
-    
-    def show_network_visualization(self, instance=None):
+
+def show_network_visualization(self, instance=None):
         """Show interactive network visualization"""
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
             self.show_message("Run an analysis first to see the network")
