@@ -1139,7 +1139,7 @@ class AnalysisScreen(MDScreen):
                 )
                 self.results_layout.add_widget(finding_item)
 
-def show_network_visualization(self, instance=None):
+    def show_network_visualization(self, instance=None):
         """Show interactive network visualization"""
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
             self.show_message("Run an analysis first to see the network")
