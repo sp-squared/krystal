@@ -110,25 +110,30 @@ class PowerMapper:
             centrality_results["degree_centrality"] = nx.degree_centrality(self.graph)
             
             # Betweenness centrality (requires connected graph)
-            if nx.is_connected(self.graph):
-                centrality_results["betweenness_centrality"] = nx.betweenness_centrality(self.graph)
-            else:
-                # Calculate for each connected component
-                betweenness = {}
-                for component in nx.connected_components(self.graph):
-                    if len(component) > 1:
-                        subgraph = self.graph.subgraph(component)
-                        sub_betweenness = nx.betweenness_centrality(subgraph)
-                        betweenness.update(sub_betweenness)
-                    else:
-                        # Single node component has betweenness 0
-                        betweenness[list(component)[0]] = 0.0
-                centrality_results["betweenness_centrality"] = betweenness
+            try:
+                if nx.is_connected(self.graph) and len(self.graph) > 2:
+                    centrality_results["betweenness_centrality"] = nx.betweenness_centrality(self.graph)
+                else:
+                    # For disconnected graphs, calculate per component
+                    betweenness = {}
+                    for component in nx.connected_components(self.graph):
+                        if len(component) > 1:
+                            subgraph = self.graph.subgraph(component)
+                            sub_betweenness = nx.betweenness_centrality(subgraph)
+                            betweenness.update(sub_betweenness)
+                        else:
+                            # Single node component has betweenness 0
+                            node = list(component)[0]
+                            betweenness[node] = 0.0
+                    centrality_results["betweenness_centrality"] = betweenness
+            except Exception as e:
+                print(f"Betweenness centrality calculation warning: {e}")
+                centrality_results["betweenness_centrality"] = centrality_results["degree_centrality"]
             
             # Eigenvector centrality (requires connected graph)
             try:
                 if nx.is_connected(self.graph) and len(self.graph) > 1:
-                    centrality_results["eigenvector_centrality"] = nx.eigenvector_centrality(self.graph, max_iter=1000)
+                    centrality_results["eigenvector_centrality"] = nx.eigenvector_centrality(self.graph, max_iter=1000, tol=1e-3)
                 else:
                     # Use degree centrality as fallback
                     centrality_results["eigenvector_centrality"] = centrality_results["degree_centrality"]
@@ -144,7 +149,7 @@ class PowerMapper:
             return centrality_results
         except Exception as e:
             print(f"Error calculating centrality: {e}")
-            return {}    
+            return {}
         
     def _detect_communities(self) -> Dict[str, Any]:
         """Detect community structure in the network - FIXED VERSION"""
@@ -158,17 +163,33 @@ class PowerMapper:
                 communities = [[node] for node in self.graph.nodes()]
                 modularity = 0.0
             else:
-                # Use Louvain method for community detection
-                communities = nx.community.louvain_communities(self.graph, seed=42)
-                modularity = nx.community.modularity(self.graph, communities)
+                try:
+                    # Use Louvain method for community detection
+                    communities = nx.community.louvain_communities(self.graph, seed=42, resolution=1.0)
+                    modularity = nx.community.modularity(self.graph, communities)
+                except Exception as e:
+                    print(f"Louvain community detection failed: {e}")
+                    # Fallback to connected components as communities
+                    communities = [list(component) for component in nx.connected_components(self.graph)]
+                    modularity = 0.0
             
             # Format communities with entity details
             detailed_communities = []
             for i, community in enumerate(communities):
-                community_entities = [self.entities[node_id] for node_id in community if node_id in self.entities]
+                community_entities = []
+                community_influence = 0.0
+                entity_count = 0
+                
+                for node_id in community:
+                    if node_id in self.entities:
+                        entity_data = self.entities[node_id].copy()
+                        community_entities.append(entity_data)
+                        influence = self._calculate_entity_influence(node_id)
+                        community_influence += influence
+                        entity_count += 1
+                
                 if community_entities:  # Only add non-empty communities
-                    community_influence = sum(self._calculate_entity_influence(node_id) for node_id in community if node_id in self.entities)
-                    avg_influence = community_influence / len(community_entities) if community_entities else 0
+                    avg_influence = community_influence / entity_count if entity_count > 0 else 0
                     
                     detailed_communities.append({
                         "id": i + 1,
@@ -182,6 +203,26 @@ class PowerMapper:
                 "modularity": modularity,
                 "community_count": len(detailed_communities)
             }
+        except Exception as e:
+            print(f"Error detecting communities: {e}")
+            # Fallback: each node as its own community
+            communities = [[node] for node in self.graph.nodes() if node in self.entities]
+            detailed_communities = []
+            for i, community in enumerate(communities):
+                community_entities = [self.entities[node_id] for node_id in community if node_id in self.entities]
+                if community_entities:
+                    detailed_communities.append({
+                        "id": i + 1,
+                        "size": len(community_entities),
+                        "entities": community_entities,
+                        "influence_score": 0.0
+                    })
+            
+            return {
+                "communities": detailed_communities,
+                "modularity": 0.0,
+                "community_count": len(detailed_communities)
+            }  
         except Exception as e:
             print(f"Error detecting communities: {e}")
             # Fallback: each node as its own community

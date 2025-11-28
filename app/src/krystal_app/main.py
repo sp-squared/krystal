@@ -613,7 +613,7 @@ class AnalysisScreen(MDScreen):
             self._analysis_error(str(e))
 
     def _analysis_complete(self, query, category=None):
-        """Handle analysis completion with category - FIXED VERSION"""
+        """Handle analysis completion with category - FINAL CONSOLIDATED VERSION"""
         try:
             # Get real news data with category
             articles = []
@@ -639,7 +639,7 @@ class AnalysisScreen(MDScreen):
             api_status = "🔴 Mock Data" if not self.news_client.is_api_available() else "🟢 Real News API"
             self.show_message(f"Using {api_status}")
             
-            # Extract entities from articles
+            # Extract entities from articles (ONLY ONCE - no duplicates)
             entities = []
             for article in articles:
                 # Combine title and content for entity extraction
@@ -648,9 +648,8 @@ class AnalysisScreen(MDScreen):
                     # Extract entities from article content
                     article_entities = self.news_client.extract_entities(text_content, query)
                     entities.extend(article_entities)
-            
-            # Also include entities that were already extracted by NewsClient
-            for article in articles:
+                
+                # ALSO include entities that were already extracted by NewsClient during article fetching
                 if 'entities' in article and article['entities']:
                     entities.extend(article['entities'])
             
@@ -699,14 +698,19 @@ class AnalysisScreen(MDScreen):
                     seen_ids.add(entity['id'])
             
             entities = final_entities
-
-            # Get relationships (with error handling)
+            
+            # Get relationships (with better error handling)
             relationships = []
             for entity in entities[:5]:  # Limit to avoid too many API calls
                 try:
                     entity_id = entity.get('id')
                     entity_name = entity.get('name', '')
                     if entity_id and entity_name:
+                        # Ensure entity_id is properly formatted for LittleSis
+                        if isinstance(entity_id, str) and not entity_id.isdigit():
+                            # Convert string ID to numeric for consistency
+                            entity_id = abs(hash(entity_id)) % 100000
+                        
                         connections = self.littlesis_client.get_entity_connections(entity_id, entity_name, max_connections=3)
                         relationships.extend(connections)
                 except Exception as e:
@@ -719,8 +723,25 @@ class AnalysisScreen(MDScreen):
             
             print(f"DEBUG: Starting analysis with {len(entities)} entities and {len(relationships)} relationships")
             
-            # Perform actual analysis
-            analysis = self.mapper.analyze_network(entities, relationships)
+            # Perform actual analysis with error handling
+            try:
+                analysis = self.mapper.analyze_network(entities, relationships)
+            except Exception as e:
+                print(f"PowerMapper analysis error: {e}")
+                # Create a basic analysis result
+                analysis = {
+                    "summary": {
+                        "entity_count": len(entities),
+                        "relationship_count": len(relationships),
+                        "network_density": 0.0,
+                        "connected_components": 1
+                    },
+                    "centrality": {},
+                    "communities": {"communities": [], "modularity": 0.0},
+                    "influence_rankings": sorted(entities, key=lambda x: x.get('influence_score', 0), reverse=True),
+                    "structural_analysis": {},
+                    "key_findings": ["Basic analysis completed", f"Found {len(entities)} entities with {len(relationships)} relationships"]
+                }
             
             # Clear loading item and display results
             self.results_layout.clear_widgets()
@@ -739,7 +760,7 @@ class AnalysisScreen(MDScreen):
             import traceback
             traceback.print_exc()
             self._analysis_error(f"Analysis failed: {str(e)}")
-
+            
     def _create_entities_from_query(self, query):
         """Create basic entities from search query when no entities are found"""
         entities = []

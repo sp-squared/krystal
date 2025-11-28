@@ -46,8 +46,21 @@ class LittleSisClient:
         return entities
     
     def get_entity_connections(self, entity_id: int, entity_name: str, max_connections: int = 8) -> List[Dict]:
-        """Get power structure connections for an entity"""
+        """Get power structure connections for an entity - FIXED VERSION"""
         print(f"🔗 Mapping power network for: {entity_name}")
+        
+        # Ensure entity_id is properly handled (can be string or int)
+        try:
+            if isinstance(entity_id, str):
+                # Try to extract numeric part from string ID
+                if entity_id.isdigit():
+                    entity_id = int(entity_id)
+                else:
+                    # Use hash of the string as a numeric ID
+                    entity_id = abs(hash(entity_id)) % 100000
+        except:
+            # Fallback to a simple numeric ID
+            entity_id = abs(hash(str(entity_id))) % 100000
         
         # Create realistic power structure connections
         connections = self._create_power_connections(entity_id, entity_name, max_connections)
