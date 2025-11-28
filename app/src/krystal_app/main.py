@@ -214,7 +214,6 @@ class AnalysisScreen(MDScreen):
     status_text = StringProperty("Ready to analyze power structures")
     is_analyzing = BooleanProperty(False)
 
-    
     def _ensure_entity_structure(self, entities):
         """Ensure all entities have required fields for PowerMapper - ENHANCED VERSION"""
         processed_entities = []
@@ -446,8 +445,134 @@ class AnalysisScreen(MDScreen):
         
         main_layout.add_widget(content_layout)
         self.add_widget(main_layout)
-    
-    # In your AnalysisScreen class, add these methods:
+
+    def extract_keywords_from_url(self, url: str) -> str:
+        """Extract meaningful keywords from a URL for news search - COMBINED ENHANCED VERSION"""
+        try:
+            print(f"🔗 Processing URL: {url}")
+            
+            # Remove protocol and domain
+            if '://' in url:
+                url = url.split('://', 1)[1]
+            
+            # Remove www and domain
+            if url.startswith('www.'):
+                url = url[4:]
+            
+            # Extract path (remove domain)
+            if '/' in url:
+                domain, path = url.split('/', 1)
+            else:
+                domain, path = url, ""
+            
+            # Common news domains to ignore in search
+            news_domains = ['cnn.com', 'bbc.com', 'reuters.com', 'apnews.com', 'theguardian.com', 
+                        'nytimes.com', 'washingtonpost.com', 'foxnews.com', 'nbcnews.com',
+                        'wsj.com', 'bloomberg.com', 'latimes.com', 'usatoday.com']
+            
+            # If it's a known news domain, focus on the path
+            if any(domain in nd or nd in domain for nd in news_domains):
+                keywords_source = path
+            else:
+                keywords_source = url
+            
+            # Clean up the path
+            import re
+            
+            # Remove date patterns (YYYY/MM/DD or YYYY-MM-DD)
+            keywords_source = re.sub(r'\d{4}[-/]\d{2}[-/]\d{2}', '', keywords_source)
+            
+            # Remove common URL suffixes and technical parts
+            remove_patterns = [
+                r'-\w+$',  # trailing slugs like -intl, -hnk
+                r'\.(html|php|aspx)$',  # file extensions
+                r'/index$',  # index pages
+                r'/\d+$',  # trailing numbers
+                r'[?&].*$',  # query parameters
+            ]
+            
+            for pattern in remove_patterns:
+                keywords_source = re.sub(pattern, '', keywords_source)
+            
+            # Replace separators with spaces
+            keywords = keywords_source.replace('-', ' ').replace('/', ' ').replace('_', ' ')
+            
+            # Clean up: remove extra spaces and title case
+            keywords = ' '.join(keywords.split()).strip().title()
+            
+            # If we have no meaningful keywords, use domain-based fallback
+            if not keywords or len(keywords) < 3:
+                domain_keywords = domain.replace('.com', '').replace('.org', '').replace('.net', '')
+                if domain_keywords and domain_keywords not in ['www', 'news']:
+                    keywords = domain_keywords.title() + " news"
+                else:
+                    keywords = "current events"
+            
+            print(f"🔍 Extracted search terms: {keywords}")
+            return keywords
+            
+        except Exception as e:
+            print(f"Error extracting keywords from URL: {e}")
+            return "breaking news"  # Generic fallback
+
+    def analyze_article(self, instance):
+        """Start analysis with enhanced UX - COMBINED URL HANDLING"""
+        query = self.url_input.text.strip()
+        if not query:
+            self.show_message("Please enter a URL or search terms")
+            return
+        
+        # Check if input is a URL
+        is_url = False
+        original_query = query
+        
+        if query.startswith(('http://', 'https://', 'www.')):
+            is_url = True
+            # Extract meaningful keywords from URL
+            query = self.extract_keywords_from_url(query)
+            print(f"🔗 URL detected: {original_query}")
+            print(f"🔍 Searching for topic: {query}")
+            
+            # Show user what we're actually searching for
+            self.show_message(f"Analyzing topic: {query}")
+            
+            # Optional: Update the input field to show the extracted keywords
+            # This helps users understand what we're searching for
+            self.url_input.text = query
+        
+        # Use category if specified
+        category = getattr(self, 'active_news_category', None)
+        
+        if self.is_analyzing:
+            return
+        
+        self.is_analyzing = True
+        self.analyze_btn.disabled = True
+        self.analyze_btn.text = "Analyzing..."
+        
+        # Show progress card
+        self.progress_card.opacity = 1
+        
+        # Clear previous results
+        self.results_layout.clear_widgets()
+        
+        # Add initial status item with context about what we're analyzing
+        if is_url:
+            status_text = f"Analyzing: {query}"
+            secondary_text = f"From URL: {original_query[:50]}..." if len(original_query) > 50 else f"From URL: {original_query}"
+        else:
+            category_text = f" (Category: {category})" if category and category != "all" else ""
+            status_text = f"Starting {self.active_analysis_type} analysis{category_text}"
+            secondary_text = f"Search: {query}"
+        
+        initial_item = TwoLineListItem(
+            text=status_text,
+            secondary_text=secondary_text
+        )
+        self.results_layout.add_widget(initial_item)
+        
+        # Start analysis process with category
+        Clock.schedule_once(lambda dt: self._perform_analysis(query, category), 0.5)
 
     def demonstrate_littlesis_in_ui(self):
         """Demonstrate LittleSis functionality in the UI"""
@@ -579,10 +704,10 @@ class AnalysisScreen(MDScreen):
         Clock.schedule_once(lambda dt: self._perform_analysis(query, category), 0.5)
 
     def _perform_analysis(self, query, category=None):
-        """Perform analysis with detailed progress updates"""
+        """Perform analysis with detailed progress updates - URL AWARE"""
         try:
             steps = [
-                (20, f"Searching {category if category else 'all'} news..."),
+                (20, f"Searching {category if category else 'all'} news..." if not query.startswith('http') else "Analyzing news topic..."),
                 (40, "Extracting entities and organizations..."),
                 (60, "Mapping relationships and connections..."),
                 (80, "Analyzing power structures..."),
@@ -611,7 +736,7 @@ class AnalysisScreen(MDScreen):
             
         except Exception as e:
             self._analysis_error(str(e))
-
+            
     def _analysis_complete(self, query, category=None):
         """Handle analysis completion with category - FINAL CONSOLIDATED VERSION"""
         try:
@@ -760,7 +885,7 @@ class AnalysisScreen(MDScreen):
             import traceback
             traceback.print_exc()
             self._analysis_error(f"Analysis failed: {str(e)}")
-            
+
     def _create_entities_from_query(self, query):
         """Create basic entities from search query when no entities are found"""
         entities = []
