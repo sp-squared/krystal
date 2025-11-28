@@ -1,6 +1,6 @@
 # Krystal
 
-![screenshot](krystal/app/img)
+![screenshot](/app/img/logo.png)
 
 > Mobile interface for power structure analysis
 
