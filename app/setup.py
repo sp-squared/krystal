@@ -18,8 +18,11 @@ setup(
     long_description_content_type="text/markdown",
     license="GPLv3",
     classifiers=[
+        
         "Development Status :: 3 - Alpha",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "GPL-3.0-or-later",
         "Programming Language :: Python :: 3",
+
+        
     ],
 )
