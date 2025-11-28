@@ -448,6 +448,76 @@ class AnalysisScreen(MDScreen):
         main_layout.add_widget(content_layout)
         self.add_widget(main_layout)
     
+    # In your AnalysisScreen class, add these methods:
+
+    def demonstrate_littlesis_in_ui(self):
+        """Demonstrate LittleSis functionality in the UI"""
+        try:
+            # Clear previous results
+            self.results_layout.clear_widgets()
+            
+            # Add header
+            header = OneLineListItem(text="🔍 LittleSis Network Analysis")
+            self.results_layout.add_widget(header)
+            
+            # Search for entities related to current query
+            current_query = self.url_input.text.strip() or "technology"
+            entities = self.littlesis_client.search_entities(current_query, per_page=5)
+            
+            # Display entities found
+            entities_header = OneLineListItem(text=f"📋 Found {len(entities)} Entities")
+            self.results_layout.add_widget(entities_header)
+            
+            for entity in entities:
+                entity_item = TwoLineListItem(
+                    text=entity['name'],
+                    secondary_text=f"Type: {entity['type']} | Influence: {entity['influence_score']}"
+                )
+                self.results_layout.add_widget(entity_item)
+            
+            # Show network connections
+            if entities:
+                connections_header = OneLineListItem(text="🔗 Network Connections")
+                self.results_layout.add_widget(connections_header)
+                
+                total_connections = 0
+                for entity in entities[:3]:  # Show connections for first 3 entities
+                    connections = self.littlesis_client.get_entity_connections(
+                        entity['id'], 
+                        max_connections=3
+                    )
+                    total_connections += len(connections)
+                    
+                    for conn in connections:
+                        conn_item = TwoLineListItem(
+                            text=f"{entity['name']} → {conn['entity2_name']}",
+                            secondary_text=f"Relationship: {conn['relationship_type']} | Strength: {conn['strength']:.2f}"
+                        )
+                        self.results_layout.add_widget(conn_item)
+                
+                # Summary
+                summary_item = TwoLineListItem(
+                    text="📊 Network Summary",
+                    secondary_text=f"{len(entities)} entities with {total_connections} total connections"
+                )
+                self.results_layout.add_widget(summary_item)
+            
+        except Exception as e:
+            error_item = OneLineListItem(text=f"❌ LittleSis demo failed: {str(e)}")
+            self.results_layout.add_widget(error_item)
+
+    # Add a button to trigger LittleSis demo in your UI
+    def add_littlesis_demo_button(self):
+        """Add a button to demonstrate LittleSis functionality"""
+        littlesis_button = MDRaisedButton(
+            text="Test LittleSis Network",
+            size_hint_y=None,
+            height=dp(40),
+            md_bg_color=[0.3, 0.5, 0.7, 1],
+            on_release=lambda x: self.demonstrate_littlesis_in_ui()
+        )
+        # Add this button to your UI layout
+
     def set_analysis_type(self, button, analysis_type):
         """Set the active analysis type"""
         # Reset all buttons
