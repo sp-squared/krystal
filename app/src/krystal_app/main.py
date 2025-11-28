@@ -45,6 +45,11 @@ class NetworkGraphWidget(Widget):
         
     def _update_graph(self, *args):
         self.canvas.clear()
+        # Add white background first to prevent black imprint
+        with self.canvas:
+            Color(1, 1, 1, 1)  # White background
+            from kivy.graphics import Rectangle
+            Rectangle(pos=self.pos, size=self.size)
         self._draw_network()
     
     def _draw_network(self):
