@@ -102,6 +102,10 @@ We welcome contributions from developers who share our commitment to transparenc
 
 *Application screenshots will be added during development*
 
+![screenshot](/img/dev01.png)
+![screenshot](/img/dev02.png)
+![screenshot](/img/dev03.png)
+
 ## 🚀 Getting Started
 
 ### Prerequisites
