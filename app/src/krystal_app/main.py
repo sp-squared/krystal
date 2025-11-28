@@ -9,10 +9,11 @@ from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.metrics import dp
 from kivy.properties import StringProperty, NumericProperty, ListProperty, BooleanProperty
-from kivy.animation import Animation
-from kivy.uix.modalview import ModalView
-from kivy.graphics import Color, Line, Ellipse, Rectangle
+from kivy.graphics import Color, Line, Ellipse
 from kivy.uix.widget import Widget
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.popup import Popup
+from kivy.uix.label import Label
 import math
 import re
 
@@ -28,12 +29,9 @@ from kivymd.uix.textfield import MDTextField
 from kivymd.uix.progressbar import MDProgressBar
 from kivymd.uix.list import MDList, OneLineListItem, TwoLineListItem, IconLeftWidget, OneLineAvatarIconListItem
 from kivymd.uix.toolbar import MDTopAppBar
-from kivymd.uix.navigationdrawer import MDNavigationDrawer
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.dialog import MDDialog
-from kivymd.uix.selectioncontrol import MDCheckbox
-from kivymd.uix.slider import MDSlider
 
 # Core functionality
 from krystal.power_mapper import PowerMapper, create_sample_network
@@ -107,9 +105,6 @@ class NetworkGraphWidget(Widget):
                 
                 # Node label
                 Color(0, 0, 0, 1)
-                name = entity.get('name', 'Unknown')
-                if len(name) > 12:
-                    name = name[:12] + "..."
     
     def on_touch_down(self, touch):
         """Handle node clicks"""
@@ -124,10 +119,6 @@ class NetworkGraphWidget(Widget):
     def show_node_info(self, entity, touch):
         """Show entity information when node is clicked"""
         # Create a popup with entity details
-        from kivy.uix.popup import Popup
-        from kivy.uix.boxlayout import BoxLayout
-        from kivy.uix.label import Label
-        
         content = BoxLayout(orientation='vertical', padding=10)
         
         name_label = Label(
@@ -189,7 +180,7 @@ class WelcomeScreen(MDScreen):
             theme_text_color="Custom",
             text_color=[0.2, 0.5, 0.8, 1],
             font_size="64sp",
-            disabled=True  # Make it non-interactive
+            disabled=True
         )
         
         # App title
@@ -221,7 +212,7 @@ class WelcomeScreen(MDScreen):
             padding=dp(20),
             spacing=dp(15),
             size_hint_y=0.4,
-            elevation=1,  # Reduced elevation
+            elevation=1,
             radius=[dp(15), dp(15), dp(15), dp(15)]
         )
         
@@ -234,7 +225,7 @@ class WelcomeScreen(MDScreen):
         
         features_list = MDBoxLayout(orientation="vertical", spacing=dp(10))
         
-        # Using MDIconButton for icons since MDIcon is not available
+        # Using MDIconButton for icons
         features = [
             ("magnify", "Analyze news articles for power structures"),
             ("chart-box", "Visualize relationship networks"),
@@ -276,7 +267,7 @@ class WelcomeScreen(MDScreen):
             size_hint_y=None,
             height=dp(50),
             md_bg_color=[0.2, 0.6, 0.8, 1],
-            elevation=2  # Reduced elevation
+            elevation=2
         )
         self.start_button.bind(on_press=self.start_analysis)
         
@@ -302,15 +293,12 @@ class WelcomeScreen(MDScreen):
     def start_analysis(self, instance):
         """Navigate to analysis screen"""
         self.manager.current = 'analysis'
-
+    
     def show_sample(self, instance):
         """Show sample data preview"""
-        # FIX: Create dialog with reduced elevation
         sample_dialog = MDDialog(
             title="Sample Analysis",
             text="This will load a demonstration with sample power structure data showing how Krystal analyzes relationships between corporations, government entities, and influential organizations.",
-            elevation=0,  # Reduced elevation
-            overlay_color=(0, 0, 0, 0.3),  # Lighter overlay
             buttons=[
                 MDFlatButton(
                     text="Cancel",
@@ -364,7 +352,7 @@ class AnalysisScreen(MDScreen):
         # Top App Bar
         self.top_bar = MDTopAppBar(
             title="Power Analysis",
-            elevation=2,  # Reduced elevation
+            elevation=2,
             md_bg_color=[0.2, 0.6, 0.8, 1],
             specific_text_color=[1, 1, 1, 1],
             left_action_items=[["arrow-left", lambda x: self.go_back()]],
@@ -376,11 +364,11 @@ class AnalysisScreen(MDScreen):
         )
         main_layout.add_widget(self.top_bar)
         
-        # Content area with scrolling for the entire screen - WITH PERFORMANCE OPTIMIZATIONS
+        # Content area with scrolling for the entire screen
         self.content_scroll = MDScrollView(
-            do_scroll_x=False,  # Only vertical scrolling
-            bar_width=dp(4),    # Thinner scrollbar
-            bar_color=[0.2, 0.6, 0.8, 0.5]  # Custom scrollbar color
+            do_scroll_x=False,
+            bar_width=dp(4),
+            bar_color=[0.2, 0.6, 0.8, 0.5]
         )
         self.content_layout = MDBoxLayout(orientation="vertical", padding=dp(20), spacing=dp(20), size_hint_y=None)
         self.content_layout.bind(minimum_height=self.content_layout.setter('height'))
@@ -390,7 +378,7 @@ class AnalysisScreen(MDScreen):
             orientation="vertical",
             padding=dp(20),
             spacing=dp(15),
-            elevation=1,  # Reduced elevation
+            elevation=1,
             radius=[dp(15), dp(15), dp(15), dp(15)],
             size_hint_y=None,
             height=dp(300)
@@ -447,7 +435,7 @@ class AnalysisScreen(MDScreen):
             size_hint_x=0.3
         )
         
-        # News categories dropdown (simplified as buttons for now)
+        # News categories dropdown
         self.category_buttons = []
         categories = ["All", "Technology", "Business", "Politics", "General"]
         
@@ -479,7 +467,7 @@ class AnalysisScreen(MDScreen):
             text="Start Analysis",
             size_hint_x=0.7,
             md_bg_color=[0.2, 0.6, 0.8, 1],
-            elevation=1,  # Reduced elevation
+            elevation=1,
             on_release=self.analyze_article
         )
         
@@ -506,7 +494,7 @@ class AnalysisScreen(MDScreen):
             orientation="vertical",
             padding=dp(20),
             spacing=dp(15),
-            elevation=0,  # Set to 0 to eliminate shadows completely
+            elevation=0,
             radius=[dp(15), dp(15), dp(15), dp(15)],
             size_hint_y=None,
             height=dp(120)
@@ -532,9 +520,7 @@ class AnalysisScreen(MDScreen):
         self.progress_card.add_widget(self.status_label)
         self.progress_card.add_widget(self.progress_bar)
         
-        # Don't add progress_card to content_layout here - we'll add/remove it dynamically
-        
-        # Results Section - DIRECTLY BELOW INPUT
+        # Results Section
         results_title = MDLabel(
             text="Analysis Results",
             font_style="H6",
@@ -544,7 +530,7 @@ class AnalysisScreen(MDScreen):
         )
         self.content_layout.add_widget(results_title)
         
-        # Results container - this will hold the dynamic results
+        # Results container
         self.results_container = MDBoxLayout(
             orientation="vertical",
             spacing=dp(15),
@@ -559,6 +545,77 @@ class AnalysisScreen(MDScreen):
         
         self.add_widget(main_layout)
     
+    def show_network_visualization(self, instance=None):
+        """Show interactive network visualization using Popup (shadow-free)"""
+        if not hasattr(self, 'current_analysis') or not self.current_analysis:
+            self.show_message("Run an analysis first to see the network")
+            return
+        
+        # Create visualization content
+        content = BoxLayout(orientation='vertical', spacing=10, padding=10)
+        
+        # Create network graph
+        entities = self.current_analysis.get('influence_rankings', [])
+        relationships = self.current_analysis.get('relationships', [])
+        
+        if entities and relationships:
+            network_widget = NetworkGraphWidget(entities, relationships)
+            network_widget.size_hint = (1, 0.8)
+            content.add_widget(network_widget)
+        else:
+            # Fallback: show entity distribution
+            viz_label = Label(
+                text="Power Network Structure",
+                font_size='18sp',
+                halign="center",
+                size_hint_y=None,
+                height=40
+            )
+            content.add_widget(viz_label)
+            
+            # Show entity type distribution
+            type_layout = BoxLayout(orientation='horizontal', spacing=10, padding=20)
+            
+            type_counts = {}
+            for entity in entities:
+                entity_type = entity.get('type', 'unknown')
+                type_counts[entity_type] = type_counts.get(entity_type, 0) + 1
+            
+            for entity_type, count in type_counts.items():
+                type_item = BoxLayout(orientation='vertical', spacing=5)
+                
+                count_label = Label(
+                    text=str(count),
+                    font_size='24sp',
+                    halign="center"
+                )
+                
+                type_label = Label(
+                    text=entity_type.title(),
+                    font_size='12sp',
+                    halign="center"
+                )
+                
+                type_item.add_widget(count_label)
+                type_item.add_widget(type_label)
+                type_layout.add_widget(type_item)
+            
+            content.add_widget(type_layout)
+        
+        # Use basic Popup with no styling
+        popup = Popup(
+            title='Network Visualization',
+            content=content,
+            size_hint=(0.9, 0.8),
+            background='',  # No background
+            separator_height=0  # No separator line
+        )
+        
+        # Manually set background color
+        popup.background_color = [1, 1, 1, 1]
+        
+        popup.open()
+
     def extract_keywords_from_url(self, url: str) -> str:
         """Extract meaningful keywords from a URL for news search"""
         try:
@@ -658,7 +715,6 @@ class AnalysisScreen(MDScreen):
             self.show_message(f"Analyzing topic: {query}")
             
             # Optional: Update the input field to show the extracted keywords
-            # This helps users understand what we're searching for
             self.url_input.text = query
         
         # Use category if specified
@@ -671,7 +727,7 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.disabled = True
         self.analyze_btn.text = "Analyzing..."
         
-        # FIX: Add progress card to layout and show it
+        # Add progress card to layout and show it
         if self.progress_card.parent is None:
             # Add progress card after input card but before results
             input_card_index = self.content_layout.children.index(self.results_container) + 1
@@ -899,7 +955,7 @@ class AnalysisScreen(MDScreen):
             self.analyze_btn.disabled = False
             self.analyze_btn.text = "Start Analysis"
             
-            # FIX: Completely remove progress card instead of just hiding it
+            # Completely remove progress card instead of just hiding it
             def remove_progress_card(dt):
                 # Remove the progress card from layout to prevent shadow artifacts
                 if self.progress_card.parent:
@@ -1334,136 +1390,7 @@ class AnalysisScreen(MDScreen):
         
         # Add a final spacer to ensure everything is visible
         self.results_container.add_widget(MDBoxLayout(size_hint_y=None, height=dp(20)))
-        
-    def show_network_visualization(self, instance=None):
-        """Show interactive network visualization using ModalView to prevent shadows"""
-        if not hasattr(self, 'current_analysis') or not self.current_analysis:
-            self.show_message("Run an analysis first to see the network")
-            return
-        
-        # Create visualization content
-        content = MDBoxLayout(orientation='vertical', size_hint_y=None)
-        content.height = 500
-        
-        # Create network graph
-        entities = self.current_analysis.get('influence_rankings', [])
-        relationships = self.current_analysis.get('relationships', [])
-        
-        if entities and relationships:
-            network_widget = NetworkGraphWidget(entities, relationships)
-            network_widget.size_hint = (1, 0.8)
-            content.add_widget(network_widget)
-        else:
-            # Fallback: show entity distribution
-            viz_label = MDLabel(
-                text="Power Network Structure",
-                font_style="H6",
-                halign="center",
-                size_hint_y=None,
-                height=40
-            )
-            content.add_widget(viz_label)
-            
-            # Show entity type distribution
-            type_layout = MDBoxLayout(orientation='horizontal', adaptive_height=True, padding=20)
-            
-            type_counts = {}
-            for entity in entities:
-                entity_type = entity.get('type', 'unknown')
-                type_counts[entity_type] = type_counts.get(entity_type, 0) + 1
-            
-            for entity_type, count in type_counts.items():
-                type_card = MDCard(
-                    orientation='vertical',
-                    padding=15,
-                    size_hint_x=None,
-                    width=100,
-                    elevation=0
-                )
-                
-                type_label = MDLabel(
-                    text=entity_type.title(),
-                    font_style="Body2",
-                    halign="center"
-                )
-                count_label = MDLabel(
-                    text=str(count),
-                    font_style="H5", 
-                    halign="center",
-                    theme_text_color="Primary"
-                )
-                
-                type_card.add_widget(count_label)
-                type_card.add_widget(type_label)
-                type_layout.add_widget(type_card)
-            
-            content.add_widget(type_layout)
-        
-        # FIX 5: Use ModalView instead of MDDialog to prevent shadow artifacts
-        from kivy.uix.modalview import ModalView
-        
-        # Create modal with transparent background
-        self.viz_modal = ModalView(
-            size_hint=(0.9, 0.8),
-            background_color=[0, 0, 0, 0],  # Fully transparent background
-            overlay_color=[0, 0, 0, 0.3],   # Light overlay
-            background=''  # Remove default background image
-        )
-        
-        # Create main container with white background
-        main_container = MDCard(
-            orientation='vertical',
-            elevation=0,  # No shadow
-            radius=[dp(15), dp(15), dp(15), dp(15)],
-            md_bg_color=[1, 1, 1, 1],  # Solid white
-            size_hint=(1, 1)
-        )
-        
-        # Create custom title bar
-        title_layout = MDBoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(60),
-            md_bg_color=[0.2, 0.6, 0.8, 1],
-            padding=dp(10),
-            radius=[dp(15), dp(15), 0, 0]
-        )
-        
-        title_label = MDLabel(
-            text="Network Visualization",
-            font_style="H6", 
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            halign="left",
-            size_hint_x=0.9
-        )
-        
-        close_btn = MDIconButton(
-            icon="close",
-            theme_text_color="Custom",
-            text_color=[1, 1, 1, 1],
-            on_release=lambda x: self.viz_modal.dismiss()
-        )
-        
-        title_layout.add_widget(title_label)
-        title_layout.add_widget(close_btn)
-        
-        # Add title and content to main container
-        main_container.add_widget(title_layout)
-        main_container.add_widget(content)
-        
-        # Add main container to modal
-        self.viz_modal.add_widget(main_container)
-        self.viz_modal.open()
-
-    def _close_viz_dialog(self, instance):
-        """Properly close visualization dialog to prevent shadow artifacts"""
-        if hasattr(self, 'viz_dialog') and self.viz_dialog:
-            self.viz_dialog.dismiss()
-            # Force garbage collection
-            import gc
-            gc.collect()  
-
+    
     def set_analysis_type(self, button, analysis_type):
         """Set the active analysis type"""
         # Reset all buttons
@@ -1587,7 +1514,7 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.disabled = False
         self.analyze_btn.text = "Start Analysis"
         
-        # FIX: Remove progress card on error too
+        # Remove progress card on error too
         def remove_progress_card(dt):
             if self.progress_card.parent:
                 self.progress_card.parent.remove_widget(self.progress_card)
@@ -1616,14 +1543,9 @@ class AnalysisScreen(MDScreen):
     
     def show_help(self):
         """Show help dialog"""
-        # FIX: Create dialog with transparent background
         help_dialog = MDDialog(
             title="How to Use Krystal",
             text="1. Enter a news URL or search terms\n2. Select analysis type\n3. Choose news category (optional)\n4. View power structure mapping\n5. Explore connections and influence scores\n\nKrystal helps you uncover hidden relationships between powerful entities in news media.",
-            elevation=0,
-            md_bg_color=[1, 1, 1, 1],
-            overlay_color=[0, 0, 0, 0.2],
-            background_color=[1, 1, 1, 1],
             buttons=[
                 MDFlatButton(
                     text="Got it",
@@ -1633,12 +1555,6 @@ class AnalysisScreen(MDScreen):
                 ),
             ],
         )
-        
-        # Remove shadow
-        if hasattr(help_dialog, 'ids') and 'container' in help_dialog.ids:
-            help_dialog.ids.container.shadow_color = [0, 0, 0, 0]
-            help_dialog.ids.container.elevation = 0
-            
         help_dialog.open()
     
     def show_settings(self):
@@ -1648,14 +1564,9 @@ class AnalysisScreen(MDScreen):
         if self.news_client.is_api_available():
             api_status = "🟢 Connected"
         
-        # FIX: Create dialog with transparent background
         settings_dialog = MDDialog(
             title="Settings & API Status",
             text=f"News API: {api_status}\n\nTo use real news data:\n1. Get API key from newsapi.org\n2. Set NEWS_API_KEY environment variable\n3. Restart the application",
-            elevation=0,
-            md_bg_color=[1, 1, 1, 1],
-            overlay_color=[0, 0, 0, 0.2],
-            background_color=[1, 1, 1, 1],
             buttons=[
                 MDFlatButton(
                     text="Close",
@@ -1665,24 +1576,8 @@ class AnalysisScreen(MDScreen):
                 ),
             ],
         )
-        
-        # Remove shadow
-        if hasattr(settings_dialog, 'ids') and 'container' in settings_dialog.ids:
-            settings_dialog.ids.container.shadow_color = [0, 0, 0, 0]
-            settings_dialog.ids.container.elevation = 0
-            
         settings_dialog.open()
 
-    def on_leave(self, *args):
-        """Called when leaving the analysis screen - clean up any dialogs"""
-        # Close any open dialogs to prevent shadow artifacts
-        if hasattr(self, 'viz_dialog') and self.viz_dialog:
-            self.viz_dialog.dismiss()
-            self.viz_dialog = None
-        
-        # Force cleanup
-        import gc
-        gc.collect()
 
 class KrystalApp(MDApp):
     """Modern KivyMD application with enhanced UX"""
@@ -1698,9 +1593,6 @@ class KrystalApp(MDApp):
     
     def build(self):
         self.title = "Krystal - Power Structure Mapper"
-        Window.clearcolor = (0.95, 0.95, 0.98, 1)
-        
-        # FIX: Set window background and prevent any overlay shadows
         Window.clearcolor = (0.95, 0.95, 0.98, 1)
         
         # Create screen manager
@@ -1727,6 +1619,7 @@ class KrystalApp(MDApp):
         else:
             print("ℹ️  Using mock news data. Set NEWS_API_KEY for real news.")
 
+
 def main():
     """Main entry point"""
     try:
@@ -1735,6 +1628,7 @@ def main():
         print(f"❌ App error: {e}")
         import traceback
         traceback.print_exc()
+
 
 if __name__ == '__main__':
     main()
