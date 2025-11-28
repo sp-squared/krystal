@@ -41,7 +41,7 @@ def setup_news_api():
         print("2. Register for a free account")
         print("3. Get your API key from the dashboard")
         print("4. Set environment variable:")
-        print("   export NEWS_API_KEY='e8f205e3a0534b8c957171e107d6cb46'")
+        print("   export NEWS_API_KEY='your_api_key_here'")
         print("\n💡 Or add to your .bashrc or .zshrc file")
     
     print("\n🔍 Testing news client...")
