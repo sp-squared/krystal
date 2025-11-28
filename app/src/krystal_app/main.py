@@ -3,10 +3,10 @@ Krystal Mobile Application - Modern Power Structure Mapping Interface
 GPL v3
 """
 
-from kivy.graphics import Color, Line, Ellipse
+import kivy
 from kivy.app import App
-from kivy.config import Config
 from kivy.clock import Clock
+from kivy.graphics import Color, Line, Ellipse, Rectangle
 from kivy.uix.widget import Widget
 from kivy.properties import NumericProperty, StringProperty, BooleanProperty
 from kivy.core.window import Window
@@ -34,6 +34,7 @@ from kivymd.uix.dialog import MDDialog
 from krystal.power_mapper import PowerMapper
 from krystal.data_sources import LittleSisClient, NewsClient
 
+
 class NetworkGraphWidget(Widget):
     """Interactive network graph visualization"""
     
@@ -49,7 +50,6 @@ class NetworkGraphWidget(Widget):
         # Add white background first to prevent black imprint
         with self.canvas:
             Color(1, 1, 1, 1)  # White background
-            from kivy.graphics import Rectangle
             Rectangle(pos=self.pos, size=self.size)
         self._draw_network()
     
@@ -97,6 +97,7 @@ class NetworkGraphWidget(Widget):
                 Color(*color)
                 Ellipse(pos=(x-15, y-15), size=(30, 30))
 
+
 class WelcomeScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -104,25 +105,41 @@ class WelcomeScreen(MDScreen):
         self.build_ui()
     
     def build_ui(self):
-        main_layout = MDBoxLayout(orientation="vertical")
+        main_layout = MDBoxLayout(
+            orientation="vertical",
+            padding="20dp",
+            spacing="20dp"
+        )
         
-        header_layout = MDBoxLayout(orientation="vertical")
+        header_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing="10dp"
+        )
         
         self.icon_label = MDIconButton(
             icon="magnify",
-            disabled=True
+            disabled=True,
+            size_hint=(None, None),
+            size="64dp"
         )
         
-        title_layout = MDBoxLayout(orientation="vertical")
+        title_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing="5dp"
+        )
         title_label = MDLabel(
             text="KRYSTAL",
             font_style="H4",
-            halign="center"
+            halign="center",
+            size_hint_y=None,
+            height="40dp"
         )
         subtitle_label = MDLabel(
             text="Power Structure Mapper",
             font_style="Subtitle1",
-            halign="center"
+            halign="center",
+            size_hint_y=None,
+            height="30dp"
         )
         
         title_layout.add_widget(title_label)
@@ -130,16 +147,24 @@ class WelcomeScreen(MDScreen):
         
         header_layout.add_widget(self.icon_label)
         header_layout.add_widget(title_layout)
-
-        features_layout = MDBoxLayout(orientation="vertical")
+    
+        features_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing="15dp"
+        )
         
         features_title = MDLabel(
             text="Discover Hidden Connections",
             font_style="H6",
-            halign="center"
+            halign="center",
+            size_hint_y=None,
+            height="35dp"
         )
         
-        features_list = MDBoxLayout(orientation="vertical")
+        features_list = MDBoxLayout(
+            orientation="vertical",
+            spacing="10dp"
+        )
         
         features = [
             ("magnify", "Analyze news articles for power structures"),
@@ -149,10 +174,17 @@ class WelcomeScreen(MDScreen):
         ]
         
         for icon, text in features:
-            feature_item = MDBoxLayout(orientation="horizontal")
+            feature_item = MDBoxLayout(
+                orientation="horizontal",
+                spacing="10dp",
+                size_hint_y=None,
+                height="40dp"
+            )
             icon_widget = MDIconButton(
                 icon=icon,
-                disabled=True
+                disabled=True,
+                size_hint_x=None,
+                width="40dp"
             )
             text_label = MDLabel(
                 text=text,
@@ -168,21 +200,21 @@ class WelcomeScreen(MDScreen):
 
         action_layout = MDBoxLayout(
             orientation="vertical",
-            padding="20dp",  # Add padding
-            spacing="10dp"   # Add spacing
+            padding="20dp",
+            spacing="15dp"
         )
         
         self.start_button = MDRaisedButton(
             text="Start Analysis",
-            size_hint=(1, None),  # Fix size hint
-            height="48dp"         # Set explicit height
+            size_hint=(1, None),
+            height="48dp"
         )
         self.start_button.bind(on_press=self.start_analysis)
         
         sample_button = MDFlatButton(
             text="Try Sample Data",
-            size_hint=(1, None),  # Fix size hint  
-            height="48dp"         # Set explicit height
+            size_hint=(1, None),
+            height="48dp"
         )
         sample_button.bind(on_press=self.show_sample)
         
@@ -194,7 +226,7 @@ class WelcomeScreen(MDScreen):
         main_layout.add_widget(action_layout)
         
         self.add_widget(main_layout)
-
+    
     def start_analysis(self, instance):
         self.manager.current = 'analysis'
     
@@ -241,7 +273,11 @@ class AnalysisScreen(MDScreen):
         Clock.schedule_once(lambda dt: self.build_ui(), 0.1)
     
     def build_ui(self):
-        main_layout = MDBoxLayout(orientation="vertical")
+        main_layout = MDBoxLayout(
+            orientation="vertical",
+            padding="10dp",
+            spacing="10dp"
+        )
         
         self.top_bar = MDTopAppBar(
             title="Power Analysis",
@@ -254,27 +290,49 @@ class AnalysisScreen(MDScreen):
         main_layout.add_widget(self.top_bar)
         
         self.content_scroll = MDScrollView()
-        self.content_layout = MDBoxLayout(orientation="vertical", size_hint_y=None)
+        self.content_layout = MDBoxLayout(
+            orientation="vertical", 
+            size_hint_y=None,
+            padding="16dp",
+            spacing="20dp"
+        )
         self.content_layout.bind(minimum_height=self.content_layout.setter('height'))
         
-        input_layout = MDBoxLayout(orientation="vertical")
+        # Input Section
+        input_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing="12dp"
+        )
         
         input_title = MDLabel(
             text="Analyze Power Structures",
-            font_style="H6"
+            font_style="H6",
+            size_hint_y=None,
+            height="40dp"
         )
         
         self.url_input = MDTextField(
             hint_text="Enter news URL or search terms...",
-            icon_left="magnify"
+            icon_left="magnify",
+            size_hint_y=None,
+            height="56dp"
         )
         
-        analysis_layout = MDBoxLayout(orientation="horizontal")
+        analysis_layout = MDBoxLayout(
+            orientation="horizontal",
+            spacing="8dp",
+            size_hint_y=None,
+            height="48dp"
+        )
         analysis_types = ["News", "Organization", "Person", "Topic"]
         
         self.analysis_buttons = []
         for text in analysis_types:
-            btn = MDRaisedButton(text=text)
+            btn = MDRaisedButton(
+                text=text,
+                size_hint_x=None,
+                width="100dp"
+            )
             btn.bind(on_release=lambda x, t=text: self.set_analysis_type(x, t))
             analysis_layout.add_widget(btn)
             self.analysis_buttons.append(btn)
@@ -282,14 +340,28 @@ class AnalysisScreen(MDScreen):
         if self.analysis_buttons:
             self.set_analysis_type(self.analysis_buttons[0], "News")
         
-        category_layout = MDBoxLayout(orientation="horizontal")
-        category_label = MDLabel(text="Category:")
+        category_layout = MDBoxLayout(
+            orientation="horizontal",
+            spacing="8dp",
+            size_hint_y=None,
+            height="48dp"
+        )
+        category_label = MDLabel(
+            text="Category:",
+            size_hint_x=None,
+            width="80dp"
+        )
+        category_layout.add_widget(category_label)
         
         self.category_buttons = []
         categories = ["All", "Technology", "Business", "Politics"]
         
         for category in categories:
-            btn = MDRaisedButton(text=category)
+            btn = MDRaisedButton(
+                text=category,
+                size_hint_x=None,
+                width="100dp"
+            )
             btn.bind(on_release=lambda x, c=category: self.set_news_category(x, c))
             category_layout.add_widget(btn)
             self.category_buttons.append(btn)
@@ -297,16 +369,23 @@ class AnalysisScreen(MDScreen):
         if self.category_buttons:
             self.set_news_category(self.category_buttons[0], "All")
         
-        button_layout = MDBoxLayout(orientation="horizontal")
+        button_layout = MDBoxLayout(
+            orientation="horizontal",
+            spacing="12dp",
+            size_hint_y=None,
+            height="56dp"
+        )
         
         self.analyze_btn = MDRaisedButton(
             text="Start Analysis",
-            on_release=self.analyze_article
+            on_release=self.analyze_article,
+            size_hint_x=0.7
         )
         
         sample_btn = MDFlatButton(
             text="Quick Sample",
-            on_release=lambda x: self.load_sample_data()
+            on_release=lambda x: self.load_sample_data(),
+            size_hint_x=0.3
         )
         
         button_layout.add_widget(self.analyze_btn)
@@ -319,11 +398,26 @@ class AnalysisScreen(MDScreen):
         input_layout.add_widget(button_layout)
         self.content_layout.add_widget(input_layout)
         
-        self.progress_layout = MDBoxLayout(orientation="vertical")
+        # Progress Section
+        self.progress_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing="8dp",
+            size_hint_y=None,
+            height="120dp"
+        )
         
-        progress_title = MDLabel(text="Analysis Progress")
+        progress_title = MDLabel(
+            text="Analysis Progress",
+            font_style="H6",
+            size_hint_y=None,
+            height="30dp"
+        )
         
-        self.status_label = MDLabel(text=self.status_text)
+        self.status_label = MDLabel(
+            text=self.status_text,
+            size_hint_y=None,
+            height="30dp"
+        )
         
         self.progress_bar = MDProgressBar(value=self.progress_value)
         
@@ -331,10 +425,20 @@ class AnalysisScreen(MDScreen):
         self.progress_layout.add_widget(self.status_label)
         self.progress_layout.add_widget(self.progress_bar)
         
-        results_title = MDLabel(text="Analysis Results")
+        # Results Section
+        results_title = MDLabel(
+            text="Analysis Results",
+            font_style="H6",
+            size_hint_y=None,
+            height="40dp"
+        )
         self.content_layout.add_widget(results_title)
         
-        self.results_container = MDBoxLayout(orientation="vertical")
+        self.results_container = MDBoxLayout(
+            orientation="vertical",
+            spacing="16dp",
+            size_hint_y=None
+        )
         self.content_layout.add_widget(self.results_container)
         
         self.content_scroll.add_widget(self.content_layout)
@@ -617,6 +721,8 @@ class AnalysisScreen(MDScreen):
     
     def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data"):
         self.results_container.clear_widgets()
+        self.results_container.spacing = "16dp"
+        self.results_container.padding = "8dp"
         
         source_name = "Unknown"
         try:
@@ -628,17 +734,36 @@ class AnalysisScreen(MDScreen):
         except:
             source_name = "Unknown"
         
-        header_layout = MDBoxLayout(orientation="vertical")
+        # Header Section
+        header_layout = MDBoxLayout(
+            orientation="vertical",
+            spacing="8dp",
+            size_hint_y=None,
+            height="120dp"
+        )
         
         title_label = MDLabel(
             text=article.get('title', 'Analysis Results'),
             font_style="H6",
-            halign="center"
+            halign="center",
+            size_hint_y=None,
+            height="60dp"
         )
         
-        source_layout = MDBoxLayout(orientation="horizontal")
-        source_label = MDLabel(text=f"Source: {source_name}")
-        api_label = MDLabel(text=api_status)
+        source_layout = MDBoxLayout(
+            orientation="horizontal",
+            spacing="8dp",
+            size_hint_y=None,
+            height="40dp"
+        )
+        source_label = MDLabel(
+            text=f"Source: {source_name}",
+            size_hint_x=0.7
+        )
+        api_label = MDLabel(
+            text=api_status,
+            size_hint_x=0.3
+        )
         
         source_layout.add_widget(source_label)
         source_layout.add_widget(api_label)
@@ -647,13 +772,29 @@ class AnalysisScreen(MDScreen):
         
         self.results_container.add_widget(header_layout)
         
+        # Network Overview Section
         if analysis.get('summary', {}).get('entity_count', 0) > 0:
-            overview_layout = MDBoxLayout(orientation="vertical")
+            overview_layout = MDBoxLayout(
+                orientation="vertical",
+                spacing="8dp",
+                size_hint_y=None,
+                height="120dp"
+            )
             
-            overview_title = MDLabel(text="Network Overview")
+            overview_title = MDLabel(
+                text="Network Overview",
+                font_style="H6",
+                size_hint_y=None,
+                height="30dp"
+            )
             overview_layout.add_widget(overview_title)
             
-            stats_layout = MDBoxLayout(orientation="horizontal")
+            stats_layout = MDBoxLayout(
+                orientation="horizontal",
+                spacing="8dp",
+                size_hint_y=None,
+                height="60dp"
+            )
             
             summary = analysis.get('summary', {})
             stats_data = [
@@ -664,9 +805,20 @@ class AnalysisScreen(MDScreen):
             ]
             
             for label, value in stats_data:
-                stat_item = MDBoxLayout(orientation="vertical")
-                value_label = MDLabel(text=value)
-                label_label = MDLabel(text=label)
+                stat_item = MDBoxLayout(
+                    orientation="vertical",
+                    spacing="4dp"
+                )
+                value_label = MDLabel(
+                    text=value,
+                    font_style="H6",
+                    halign="center"
+                )
+                label_label = MDLabel(
+                    text=label,
+                    font_style="Caption",
+                    halign="center"
+                )
                 stat_item.add_widget(value_label)
                 stat_item.add_widget(label_label)
                 stats_layout.add_widget(stat_item)
@@ -674,14 +826,30 @@ class AnalysisScreen(MDScreen):
             overview_layout.add_widget(stats_layout)
             self.results_container.add_widget(overview_layout)
         
+        # Entity Distribution Section
         entities = analysis.get('influence_rankings', [])
         if entities:
-            distribution_layout = MDBoxLayout(orientation="vertical")
+            distribution_layout = MDBoxLayout(
+                orientation="vertical",
+                spacing="8dp",
+                size_hint_y=None,
+                height="120dp"
+            )
             
-            distribution_title = MDLabel(text="Entity Distribution")
+            distribution_title = MDLabel(
+                text="Entity Distribution",
+                font_style="H6",
+                size_hint_y=None,
+                height="30dp"
+            )
             distribution_layout.add_widget(distribution_title)
             
-            type_layout = MDBoxLayout(orientation="horizontal")
+            type_layout = MDBoxLayout(
+                orientation="horizontal",
+                spacing="8dp",
+                size_hint_y=None,
+                height="60dp"
+            )
             
             type_counts = {}
             for entity in entities:
@@ -689,9 +857,20 @@ class AnalysisScreen(MDScreen):
                 type_counts[entity_type] = type_counts.get(entity_type, 0) + 1
             
             for entity_type, count in type_counts.items():
-                type_item = MDBoxLayout(orientation="vertical")
-                count_label = MDLabel(text=str(count))
-                type_label = MDLabel(text=entity_type.title())
+                type_item = MDBoxLayout(
+                    orientation="vertical",
+                    spacing="4dp"
+                )
+                count_label = MDLabel(
+                    text=str(count),
+                    font_style="H6",
+                    halign="center"
+                )
+                type_label = MDLabel(
+                    text=entity_type.title(),
+                    font_style="Caption",
+                    halign="center"
+                )
                 type_item.add_widget(count_label)
                 type_item.add_widget(type_label)
                 type_layout.add_widget(type_item)
@@ -699,26 +878,59 @@ class AnalysisScreen(MDScreen):
             distribution_layout.add_widget(type_layout)
             self.results_container.add_widget(distribution_layout)
         
+        # Most Influential Entities Section
         if analysis['influence_rankings']:
-            influencers_layout = MDBoxLayout(orientation="vertical")
+            influencers_layout = MDBoxLayout(
+                orientation="vertical",
+                spacing="8dp",
+                size_hint_y=None,
+                height="240dp"
+            )
             
-            influencers_title = MDLabel(text="Most Influential Entities")
+            influencers_title = MDLabel(
+                text="Most Influential Entities",
+                font_style="H6",
+                size_hint_y=None,
+                height="30dp"
+            )
             influencers_layout.add_widget(influencers_title)
             
             for i, entity in enumerate(analysis['influence_rankings'][:4]):
                 score = entity.get('influence_score', 0)
                 
-                influencer_item = MDBoxLayout(orientation="horizontal")
+                influencer_item = MDBoxLayout(
+                    orientation="horizontal",
+                    spacing="8dp",
+                    size_hint_y=None,
+                    height="48dp"
+                )
                 
-                rank_label = MDLabel(text=str(i+1))
+                rank_label = MDLabel(
+                    text=str(i+1),
+                    size_hint_x=0.1
+                )
                 
-                info_layout = MDBoxLayout(orientation="vertical")
-                name_label = MDLabel(text=entity['name'])
-                type_label = MDLabel(text=entity.get('type', 'Entity').title())
+                info_layout = MDBoxLayout(
+                    orientation="vertical",
+                    spacing="2dp",
+                    size_hint_x=0.7
+                )
+                name_label = MDLabel(
+                    text=entity['name'],
+                    font_style="Subtitle1"
+                )
+                type_label = MDLabel(
+                    text=entity.get('type', 'Entity').title(),
+                    font_style="Caption"
+                )
                 info_layout.add_widget(name_label)
                 info_layout.add_widget(type_label)
                 
-                score_label = MDLabel(text=f"{score:.1f}")
+                score_label = MDLabel(
+                    text=f"{score:.1f}",
+                    size_hint_x=0.2,
+                    font_style="H6"
+                )
                 
                 influencer_item.add_widget(rank_label)
                 influencer_item.add_widget(info_layout)
@@ -727,15 +939,33 @@ class AnalysisScreen(MDScreen):
             
             self.results_container.add_widget(influencers_layout)
         
+        # Key Insights Section
         if analysis.get('key_findings'):
-            findings_layout = MDBoxLayout(orientation="vertical")
+            findings_layout = MDBoxLayout(
+                orientation="vertical",
+                spacing="8dp",
+                size_hint_y=None
+            )
             
-            findings_title = MDLabel(text="Key Insights")
+            findings_title = MDLabel(
+                text="Key Insights",
+                font_style="H6",
+                size_hint_y=None,
+                height="30dp"
+            )
             findings_layout.add_widget(findings_title)
             
             for finding in analysis['key_findings'][:2]:
-                finding_item = MDBoxLayout(orientation="horizontal")
-                finding_label = MDLabel(text=finding)
+                finding_item = MDBoxLayout(
+                    orientation="horizontal",
+                    spacing="8dp",
+                    size_hint_y=None,
+                    height="40dp"
+                )
+                finding_label = MDLabel(
+                    text=finding,
+                    font_style="Body1"
+                )
                 finding_item.add_widget(finding_label)
                 findings_layout.add_widget(finding_item)
             
@@ -859,16 +1089,17 @@ class AnalysisScreen(MDScreen):
         )
         help_dialog.open()
 
+
 class KrystalApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
+        self.theme_cls.material_style = "M3"
         
-        # Use newer material design
-        self.theme_cls.material_style = "M3"  
-        # Disable multisampling
-        Config.set('graphics', 'multisamples', '0')
+        # Fix for button shadow issues
+        from kivy.config import Config
+        Config.set('graphics', 'multisamples', '0')  # Disable multisampling
 
     def build(self):
         self.title = "Krystal - Power Structure Mapper"
