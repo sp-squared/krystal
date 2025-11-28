@@ -974,7 +974,7 @@ class AnalysisScreen(MDScreen):
     
     def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data", 
                             original_url=None, extracted_topic=None):
-        """Display beautiful analysis results in the results container"""
+        """Display beautiful analysis results in the results container using flat design"""
         
         # Clear previous results from the container
         self.results_container.clear_widgets()
@@ -990,16 +990,15 @@ class AnalysisScreen(MDScreen):
         except:
             source_name = "Unknown"
         
-        # Header section with source info - NO ELEVATION
-        header_card = MDCard(
+        # Header section with source info - FLAT STYLING
+        header_container = MDBoxLayout(
             orientation="vertical",
             padding=dp(20),
             spacing=dp(10),
             size_hint_y=None,
             height=dp(120),
-            elevation=0,  # Reduced from 2
-            radius=[dp(15), dp(15), dp(15), dp(15)],
-            md_bg_color=[0.95, 0.97, 1.0, 1]
+            md_bg_color=[0.95, 0.97, 1.0, 1],
+            radius=[dp(15), dp(15), dp(15), dp(15)]
         )
         
         # Article title
@@ -1031,20 +1030,20 @@ class AnalysisScreen(MDScreen):
         
         source_layout.add_widget(source_label)
         source_layout.add_widget(api_label)
-        header_card.add_widget(title_label)
-        header_card.add_widget(source_layout)
+        header_container.add_widget(title_label)
+        header_container.add_widget(source_layout)
         
-        self.results_container.add_widget(header_card)
+        self.results_container.add_widget(header_container)
         
-        # URL context if applicable
+        # URL context if applicable - FLAT STYLING
         if original_url and extracted_topic:
-            url_card = MDCard(
+            url_container = MDBoxLayout(
                 orientation="horizontal",
                 padding=dp(20),
                 spacing=dp(15),
                 size_hint_y=None,
                 height=dp(80),
-                elevation=0,  # Reduced from 1
+                md_bg_color=[0.98, 0.98, 0.98, 1],
                 radius=[dp(10), dp(10), dp(10), dp(10)]
             )
             
@@ -1068,21 +1067,20 @@ class AnalysisScreen(MDScreen):
             url_content.add_widget(url_title)
             url_content.add_widget(url_subtitle)
             
-            url_card.add_widget(url_icon)
-            url_card.add_widget(url_content)
-            self.results_container.add_widget(url_card)
+            url_container.add_widget(url_icon)
+            url_container.add_widget(url_content)
+            self.results_container.add_widget(url_container)
         
-        # API help if using mock data
+        # API help if using mock data - FLAT STYLING
         if "Mock" in api_status:
-            help_card = MDCard(
+            help_container = MDBoxLayout(
                 orientation="horizontal",
                 padding=dp(20),
                 spacing=dp(15),
                 size_hint_y=None,
                 height=dp(60),
-                elevation=0,  # Reduced from 1
-                radius=[dp(10), dp(10), dp(10), dp(10)],
-                md_bg_color=[1.0, 0.95, 0.9, 1]
+                md_bg_color=[1.0, 0.95, 0.9, 1],
+                radius=[dp(10), dp(10), dp(10), dp(10)]
             )
             
             help_icon = MDIconButton(
@@ -1098,19 +1096,19 @@ class AnalysisScreen(MDScreen):
                 theme_text_color="Secondary"
             )
             
-            help_card.add_widget(help_icon)
-            help_card.add_widget(help_label)
-            self.results_container.add_widget(help_card)
+            help_container.add_widget(help_icon)
+            help_container.add_widget(help_label)
+            self.results_container.add_widget(help_container)
         
-        # Network Overview Section - NO ELEVATION
+        # Network Overview Section - FLAT STYLING
         if analysis.get('summary', {}).get('entity_count', 0) > 0:
-            overview_card = MDCard(
+            overview_container = MDBoxLayout(
                 orientation="vertical",
                 padding=dp(20),
                 spacing=dp(15),
                 size_hint_y=None,
                 height=dp(180),
-                elevation=0,  # Reduced from 2
+                md_bg_color=[1, 1, 1, 1],
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
             
@@ -1119,7 +1117,7 @@ class AnalysisScreen(MDScreen):
                 font_style="H6",
                 theme_text_color="Primary"
             )
-            overview_card.add_widget(overview_title)
+            overview_container.add_widget(overview_title)
             
             # Stats in a grid
             stats_grid = MDGridLayout(cols=2, spacing=dp(15), padding=dp(10), adaptive_height=True)
@@ -1150,10 +1148,10 @@ class AnalysisScreen(MDScreen):
                 stat_item.add_widget(label_label)
                 stats_grid.add_widget(stat_item)
             
-            overview_card.add_widget(stats_grid)
-            self.results_container.add_widget(overview_card)
+            overview_container.add_widget(stats_grid)
+            self.results_container.add_widget(overview_container)
         
-        # Entity Distribution - NO ELEVATION
+        # Entity Distribution - FLAT STYLING
         entities = analysis.get('influence_rankings', [])
         if entities:
             # Entity type distribution
@@ -1162,13 +1160,13 @@ class AnalysisScreen(MDScreen):
                 entity_type = entity.get('type', 'unknown')
                 type_counts[entity_type] = type_counts.get(entity_type, 0) + 1
             
-            distribution_card = MDCard(
+            distribution_container = MDBoxLayout(
                 orientation="vertical",
                 padding=dp(20),
                 spacing=dp(15),
                 size_hint_y=None,
                 height=dp(140),
-                elevation=0,  # Reduced from 1
+                md_bg_color=[0.98, 0.98, 0.98, 1],
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
             
@@ -1177,7 +1175,7 @@ class AnalysisScreen(MDScreen):
                 font_style="H6",
                 theme_text_color="Primary"
             )
-            distribution_card.add_widget(distribution_title)
+            distribution_container.add_widget(distribution_title)
             
             # Entity types in a row
             type_layout = MDBoxLayout(orientation="horizontal", spacing=dp(15), adaptive_height=True)
@@ -1223,18 +1221,18 @@ class AnalysisScreen(MDScreen):
                 type_item.add_widget(type_label)
                 type_layout.add_widget(type_item)
             
-            distribution_card.add_widget(type_layout)
-            self.results_container.add_widget(distribution_card)
+            distribution_container.add_widget(type_layout)
+            self.results_container.add_widget(distribution_container)
         
-        # Top Influencers - NO ELEVATION  
+        # Top Influencers - FLAT STYLING  
         if analysis['influence_rankings']:
-            influencers_card = MDCard(
+            influencers_container = MDBoxLayout(
                 orientation="vertical",
                 padding=dp(20),
                 spacing=dp(15),
                 size_hint_y=None,
                 height=dp(320),
-                elevation=0,  # Reduced from 2
+                md_bg_color=[1, 1, 1, 1],
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
             
@@ -1243,7 +1241,7 @@ class AnalysisScreen(MDScreen):
                 font_style="H6",
                 theme_text_color="Primary"
             )
-            influencers_card.add_widget(influencers_title)
+            influencers_container.add_widget(influencers_title)
             
             for i, entity in enumerate(analysis['influence_rankings'][:4]):  # Show top 4
                 score = entity.get('influence_score', 0)
@@ -1255,13 +1253,12 @@ class AnalysisScreen(MDScreen):
                     padding=dp(10)
                 )
                 
-                # Rank badge
-                rank_badge = MDCard(
+                # Rank badge - FLAT STYLING
+                rank_container = MDBoxLayout(
                     size_hint=(None, None),
                     size=(dp(40), dp(40)),
-                    elevation=0,  # Reduced from 1
-                    radius=[dp(20), dp(20), dp(20), dp(20)],
-                    md_bg_color=[0.2, 0.6, 0.8, 1]
+                    md_bg_color=[0.2, 0.6, 0.8, 1],
+                    radius=[dp(20), dp(20), dp(20), dp(20)]
                 )
                 rank_label = MDLabel(
                     text=str(i+1),
@@ -1271,7 +1268,7 @@ class AnalysisScreen(MDScreen):
                     halign="center",
                     valign="center"
                 )
-                rank_badge.add_widget(rank_label)
+                rank_container.add_widget(rank_label)
                 
                 # Entity info
                 info_layout = MDBoxLayout(orientation="vertical", spacing=dp(2), size_hint_x=0.5)
@@ -1325,7 +1322,7 @@ class AnalysisScreen(MDScreen):
                 score_layout.add_widget(score_label)
                 score_layout.add_widget(progress_bg)
                 
-                influencer_item.add_widget(rank_badge)
+                influencer_item.add_widget(rank_container)
                 influencer_item.add_widget(info_layout)
                 influencer_item.add_widget(score_layout)
                 
@@ -1337,19 +1334,19 @@ class AnalysisScreen(MDScreen):
                     padding=dp(5)
                 )
                 item_container.add_widget(influencer_item)
-                influencers_card.add_widget(item_container)
+                influencers_container.add_widget(item_container)
             
-            self.results_container.add_widget(influencers_card)
+            self.results_container.add_widget(influencers_container)
         
-        # Key Findings - NO ELEVATION
+        # Key Findings - FLAT STYLING
         if analysis.get('key_findings'):
-            findings_card = MDCard(
+            findings_container = MDBoxLayout(
                 orientation="vertical",
                 padding=dp(20),
                 spacing=dp(15),
                 size_hint_y=None,
                 height=dp(140),
-                elevation=0,  # Reduced from 1
+                md_bg_color=[0.98, 0.98, 0.98, 1],
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
             
@@ -1358,7 +1355,7 @@ class AnalysisScreen(MDScreen):
                 font_style="H6",
                 theme_text_color="Primary"
             )
-            findings_card.add_widget(findings_title)
+            findings_container.add_widget(findings_title)
             
             for finding in analysis['key_findings'][:2]:  # Show top 2 findings
                 finding_item = MDBoxLayout(
@@ -1384,13 +1381,13 @@ class AnalysisScreen(MDScreen):
                 )
                 finding_item.add_widget(icon_widget)
                 finding_item.add_widget(finding_label)
-                findings_card.add_widget(finding_item)
+                findings_container.add_widget(finding_item)
             
-            self.results_container.add_widget(findings_card)
+            self.results_container.add_widget(findings_container)
         
         # Add a final spacer to ensure everything is visible
         self.results_container.add_widget(MDBoxLayout(size_hint_y=None, height=dp(20)))
-    
+
     def set_analysis_type(self, button, analysis_type):
         """Set the active analysis type"""
         # Reset all buttons
