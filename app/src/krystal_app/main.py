@@ -6,6 +6,8 @@ GPL v3
 import kivy
 from kivy.app import App
 from kivy.clock import Clock
+from kivy.graphics import Color, Line, Ellipse
+from kivy.uix.widget import Widget
 from kivy.properties import NumericProperty, StringProperty, BooleanProperty
 from kivy.core.window import Window
 from kivy.uix.widget import Widget
@@ -32,7 +34,6 @@ from kivymd.uix.dialog import MDDialog
 from krystal.power_mapper import PowerMapper
 from krystal.data_sources import LittleSisClient, NewsClient
 
-
 class NetworkGraphWidget(Widget):
     """Interactive network graph visualization"""
     
@@ -57,6 +58,7 @@ class NetworkGraphWidget(Widget):
         num_nodes = len(self.entities)
         
         with self.canvas:
+            # Draw relationships first (lines)
             for rel in self.relationships:
                 source_id = rel.get('source')
                 target_id = rel.get('target')
@@ -69,6 +71,7 @@ class NetworkGraphWidget(Widget):
                     Color(0.3, 0.3, 0.8, strength)
                     Line(points=[src_x, src_y, tgt_x, tgt_y], width=1.5)
             
+            # Draw entities (nodes)
             for i, entity in enumerate(self.entities):
                 entity_id = entity.get('id')
                 angle = 2 * math.pi * i / num_nodes
@@ -89,7 +92,6 @@ class NetworkGraphWidget(Widget):
                 Color(*color)
                 Ellipse(pos=(x-15, y-15), size=(30, 30))
 
-
 class WelcomeScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -97,15 +99,18 @@ class WelcomeScreen(MDScreen):
         self.build_ui()
     
     def build_ui(self):
-        main_layout = MDBoxLayout(orientation="vertical")
-        
-        header_layout = MDBoxLayout(orientation="vertical")
-        
-        self.icon_label = MDIconButton(
-            icon="magnify",
-            disabled=True
+        main_layout = MDBoxLayout(
+            orientation="vertical",
+            padding="20dp",
+            spacing="20dp"
         )
-        
+        self.content_layout = MDBoxLayout(
+            orientation="vertical", 
+            size_hint_y=None,
+            padding="10dp",
+            spacing="10dp"
+        )
+
         title_layout = MDBoxLayout(orientation="vertical")
         title_label = MDLabel(
             text="KRYSTAL",
@@ -117,10 +122,9 @@ class WelcomeScreen(MDScreen):
             font_style="Subtitle1",
             halign="center"
         )
-        
+
         title_layout.add_widget(title_label)
         title_layout.add_widget(subtitle_label)
-        
         header_layout.add_widget(self.icon_label)
         header_layout.add_widget(title_layout)
         
@@ -151,6 +155,7 @@ class WelcomeScreen(MDScreen):
                 text=text,
                 font_style="Body2"
             )
+
             feature_item.add_widget(icon_widget)
             feature_item.add_widget(text_label)
             features_list.add_widget(feature_item)
@@ -331,7 +336,10 @@ class AnalysisScreen(MDScreen):
             self.show_message("Run an analysis first to see the network")
             return
         
-        content = BoxLayout(orientation='vertical')
+        content = BoxLayout(
+            orientation='vertical',
+            padding='10dp'
+        )
         
         entities = self.current_analysis.get('influence_rankings', [])
         relationships = self.current_analysis.get('relationships', [])
@@ -346,9 +354,17 @@ class AnalysisScreen(MDScreen):
         popup = Popup(
             title='Network Visualization',
             content=content,
-            size_hint=(0.9, 0.8)
+            size_hint=(0.9, 0.8),
+            auto_dismiss=True
         )
+        
+        # Clean up when popup is dismissed
+        popup.bind(on_dismiss=lambda x: self._cleanup_popup(content))
         popup.open()
+
+    def _cleanup_popup(self, content):
+        """Clean up popup content to prevent rendering artifacts"""
+        content.clear_widgets()
 
     def extract_keywords_from_url(self, url: str) -> str:
         try:
@@ -832,13 +848,13 @@ class AnalysisScreen(MDScreen):
         )
         help_dialog.open()
 
-
 class KrystalApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
-    
+        self.theme_cls.material_style = "M3"  # Use newer material design
+
     def build(self):
         self.title = "Krystal - Power Structure Mapper"
         Window.clearcolor = (1, 1, 1, 1)
