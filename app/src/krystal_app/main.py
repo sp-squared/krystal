@@ -120,7 +120,7 @@ class WelcomeScreen(MDScreen):
             icon="magnify",
             disabled=True,
             size_hint=(None, None),
-            size="64dp"
+            size=("64dp", "64dp")
         )
         
         title_layout = MDBoxLayout(
@@ -183,8 +183,8 @@ class WelcomeScreen(MDScreen):
             icon_widget = MDIconButton(
                 icon=icon,
                 disabled=True,
-                size_hint_x=None,
-                width="40dp"
+                size_hint=(None, None),
+                size=("40dp", "40dp")  
             )
             text_label = MDLabel(
                 text=text,
@@ -1179,7 +1179,6 @@ class AnalysisScreen(MDScreen):
         )
         help_dialog.open()
 
-
 class KrystalApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1214,7 +1213,6 @@ class KrystalApp(MDApp):
         else:
             print("Using mock news data.")
 
-
 def main():
     try:
         KrystalApp().run()
@@ -1222,7 +1220,6 @@ def main():
         print(f"App error: {e}")
         import traceback
         traceback.print_exc()
-
 
 if __name__ == '__main__':
     main()
