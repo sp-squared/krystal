@@ -18,7 +18,7 @@ setup(
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/your-username/krystal",
-    license= "GPL-3.0-or-later",,
+    license= "GPL-3.0-or-later",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Programming Language :: Python :: 3",
