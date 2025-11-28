@@ -215,7 +215,7 @@ class AnalysisScreen(MDScreen):
     is_analyzing = BooleanProperty(False)
 
     def _ensure_entity_structure(self, entities):
-        """Ensure all entities have required fields for PowerMapper"""
+        """Ensure all entities have required fields for PowerMapper - FIXED VERSION"""
         processed_entities = []
         
         for i, entity in enumerate(entities):
@@ -223,10 +223,14 @@ class AnalysisScreen(MDScreen):
             if not isinstance(entity, dict):
                 continue
                 
-            # Ensure ID exists
+            # Ensure ID exists and is a string
             if 'id' not in entity:
                 name = entity.get('name', f'entity_{i}')
                 entity['id'] = f"{name.lower().replace(' ', '_')}_{i}"
+            else:
+                # Convert ID to string if it's an integer
+                if isinstance(entity['id'], int):
+                    entity['id'] = str(entity['id'])
             
             # Ensure name exists
             if 'name' not in entity:
@@ -234,7 +238,16 @@ class AnalysisScreen(MDScreen):
                 
             # Ensure type exists
             if 'type' not in entity:
-                entity['type'] = 'organization'  # Default type
+                # Try to infer type from name or context
+                name_lower = entity['name'].lower()
+                if any(word in name_lower for word in ['corp', 'inc', 'ltd', 'company']):
+                    entity['type'] = 'corporation'
+                elif any(word in name_lower for word in ['gov', 'agency', 'department', 'ministry']):
+                    entity['type'] = 'government'
+                elif any(word in name_lower for word in ['person', 'ceo', 'director', 'president']):
+                    entity['type'] = 'person'
+                else:
+                    entity['type'] = 'organization'
                 
             processed_entities.append(entity)
         
@@ -591,26 +604,41 @@ class AnalysisScreen(MDScreen):
             entities = list(unique_entities.values())
             
             # Get relationships (with error handling)
+            
+        # Get relationships (with better error handling)
             relationships = []
             for entity in entities[:5]:  # Limit to avoid too many API calls
                 try:
                     entity_id = entity.get('id')
-                    if entity_id and not entity_id.startswith('entity_'):  # Only try for non-generated IDs
-                        connections = self.littlesis_client.get_entity_connections(entity_id)
+                    if entity_id and not str(entity_id).startswith('entity_'):  # Only try for non-generated IDs
+                        print(f"DEBUG: Fetching connections for {entity['name']} (ID: {entity_id})")
+                        connections = self.littlesis_client.get_entity_connections(str(entity_id))
+                        
                         # Ensure connections have proper source/target format
                         for conn in connections:
                             if 'source' not in conn:
-                                conn['source'] = entity_id
+                                conn['source'] = str(entity_id)
                             if 'target' not in conn:
-                                conn['target'] = conn.get('entity2_id', 'unknown')
+                                # Try different possible target fields
+                                target = conn.get('entity2_id') or conn.get('target_id') or 'unknown'
+                                conn['target'] = str(target)
+                            # Ensure strength field exists
+                            if 'strength' not in conn:
+                                conn['strength'] = 0.5
+                        
                         relationships.extend(connections)
+                        print(f"DEBUG: Found {len(connections)} connections for {entity['name']}")
+                        
                 except Exception as e:
                     print(f"Failed to get connections for {entity.get('name', 'unknown')}: {e}")
                     continue
             
             # If no relationships found, create some sample ones
-            if not relationships and len(entities) >= 2:
+            if not relationships:
                 relationships = self._create_sample_relationships(entities)
+                print(f"DEBUG: Created {len(relationships)} sample relationships")
+            
+            print(f"DEBUG: Starting analysis with {len(entities)} entities and {len(relationships)} relationships")
             
             # Perform actual analysis
             analysis = self.mapper.analyze_network(entities, relationships)
@@ -648,20 +676,33 @@ class AnalysisScreen(MDScreen):
         return entities
 
     def _create_sample_relationships(self, entities):
-        """Create sample relationships when no real ones are found"""
+        """Create sample relationships when no real ones are found - FIXED VERSION"""
         relationships = []
         if len(entities) >= 2:
             for i in range(min(3, len(entities) - 1)):
+                rel_strength = 0.5 + (i * 0.1)
                 relationships.append({
-                    'source': entities[i]['id'],
-                    'target': entities[i + 1]['id'],
+                    'source': str(entities[i]['id']),  # Ensure string IDs
+                    'target': str(entities[i + 1]['id']),
                     'type': 'connected_to',
                     'relationship': 'associated_with',
                     'description': f"{entities[i]['name']} connected to {entities[i + 1]['name']}",
-                    'strength': 0.5 + (i * 0.1)  # Varying strength
+                    'strength': rel_strength
                 })
+        
+        # Also create some circular relationships for better network structure
+        if len(entities) >= 3:
+            relationships.append({
+                'source': str(entities[0]['id']),
+                'target': str(entities[2]['id']),
+                'type': 'influences',
+                'relationship': 'influences',
+                'description': f"{entities[0]['name']} influences {entities[2]['name']}",
+                'strength': 0.7
+            })
+        
         return relationships
-
+    
     def _analysis_error(self, error_msg):
         """Handle analysis errors"""
         self.is_analyzing = False
@@ -688,12 +729,13 @@ class AnalysisScreen(MDScreen):
         self.url_input.text = "technology sector influence"
         self.analyze_article(None)
     
+
     def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data"):
-        """Display beautiful analysis results with API status"""
+        """Display beautiful analysis results with API status - ENHANCED VERSION"""
         # Article header with API status
         article_item = TwoLineListItem(
             text=article.get('title', 'Analysis Results'),
-            secondary_text=f"Source: {article.get('source', 'Unknown')} | {api_status}",
+            secondary_text=f"Source: {article.get('source', {}).get('name', 'Unknown')} | {api_status}",
             bg_color=[0.95, 0.95, 0.98, 1]
         )
         self.results_layout.add_widget(article_item)
@@ -705,6 +747,13 @@ class AnalysisScreen(MDScreen):
                 bg_color=[1, 0.9, 0.9, 1]  # Light red background for notice
             )
             self.results_layout.add_widget(help_item)
+        
+        # Debug info (can be removed later)
+        debug_item = TwoLineListItem(
+            text="🔧 Analysis Details",
+            secondary_text=f"Processed {analysis['summary']['entity_count']} entities, {analysis['summary']['relationship_count']} relationships"
+        )
+        self.results_layout.add_widget(debug_item)
         
         # Summary card
         summary_item = TwoLineListItem(
@@ -719,9 +768,11 @@ class AnalysisScreen(MDScreen):
             self.results_layout.add_widget(influencers_header)
             
             for i, entity in enumerate(analysis['influence_rankings'][:5]):
+                score = entity.get('influence_score', 0)
+                entity_type = entity.get('type', 'Entity').title()
                 influencer_item = TwoLineListItem(
                     text=f"{i+1}. {entity['name']}",
-                    secondary_text=f"Influence score: {entity.get('influence_score', 0):.1f} • {entity.get('type', 'Entity').title()}"
+                    secondary_text=f"Influence: {score:.1f} • Type: {entity_type}"
                 )
                 self.results_layout.add_widget(influencer_item)
         
@@ -733,7 +784,7 @@ class AnalysisScreen(MDScreen):
             for finding in analysis['key_findings'][:3]:
                 finding_item = OneLineListItem(text=f"• {finding}")
                 self.results_layout.add_widget(finding_item)
-    
+                
     def show_message(self, message):
         """Show a message to the user"""
         # Simple message display
