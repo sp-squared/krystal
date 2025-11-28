@@ -184,7 +184,7 @@ class WelcomeScreen(MDScreen):
                 icon=icon,
                 disabled=True,
                 size_hint=(None, None),
-                size=("40dp", "40dp")  
+                size=("40dp", "40dp")
             )
             text_label = MDLabel(
                 text=text,
@@ -275,8 +275,8 @@ class AnalysisScreen(MDScreen):
     def build_ui(self):
         main_layout = MDBoxLayout(
             orientation="vertical",
-            padding="10dp",
-            spacing="10dp"
+            padding="0dp",
+            spacing="0dp"
         )
         
         self.top_bar = MDTopAppBar(
@@ -289,14 +289,14 @@ class AnalysisScreen(MDScreen):
         )
         main_layout.add_widget(self.top_bar)
         
-        self.content_scroll = MDScrollView()
-        self.content_layout = MDBoxLayout(
-            orientation="vertical", 
+        # Static Content Section (doesn't scroll)
+        static_content = MDBoxLayout(
+            orientation="vertical",
             size_hint_y=None,
+            height="420dp",  # Fixed height for static content
             padding="16dp",
             spacing="20dp"
         )
-        self.content_layout.bind(minimum_height=self.content_layout.setter('height'))
         
         # Input Section
         input_layout = MDBoxLayout(
@@ -396,15 +396,16 @@ class AnalysisScreen(MDScreen):
         input_layout.add_widget(analysis_layout)
         input_layout.add_widget(category_layout)
         input_layout.add_widget(button_layout)
-        self.content_layout.add_widget(input_layout)
+        static_content.add_widget(input_layout)
         
-        # Progress Section
+        # Progress Section (also static)
         self.progress_layout = MDBoxLayout(
             orientation="vertical",
             spacing="8dp",
             size_hint_y=None,
             height="120dp"
         )
+        self.progress_layout.opacity = 0  # Initially hidden
         
         progress_title = MDLabel(
             text="Analysis Progress",
@@ -424,8 +425,22 @@ class AnalysisScreen(MDScreen):
         self.progress_layout.add_widget(progress_title)
         self.progress_layout.add_widget(self.status_label)
         self.progress_layout.add_widget(self.progress_bar)
+        static_content.add_widget(self.progress_layout)
         
-        # Results Section
+        # Add static content to main layout
+        main_layout.add_widget(static_content)
+        
+        # Scrollable Content Section (only Analysis Results)
+        self.content_scroll = MDScrollView()
+        self.content_layout = MDBoxLayout(
+            orientation="vertical", 
+            size_hint_y=None,
+            padding="16dp",
+            spacing="20dp"
+        )
+        self.content_layout.bind(minimum_height=self.content_layout.setter('height'))
+        
+        # Results Section (scrollable)
         results_title = MDLabel(
             text="Analysis Results",
             font_style="H6",
@@ -543,8 +558,8 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.disabled = True
         self.analyze_btn.text = "Analyzing..."
         
-        if self.progress_layout.parent is None:
-            self.content_layout.add_widget(self.progress_layout)
+        # Show progress in static area
+        self.progress_layout.opacity = 1
         
         self.results_container.clear_widgets()
         
@@ -709,8 +724,8 @@ class AnalysisScreen(MDScreen):
             self.analyze_btn.text = "Start Analysis"
             
             def remove_progress(dt):
-                if self.progress_layout.parent:
-                    self.progress_layout.parent.remove_widget(self.progress_layout)
+                # Just hide the progress instead of removing from layout
+                self.progress_layout.opacity = 0
                 self.progress_value = 0
                 self.status_text = "Ready to analyze power structures"
             
@@ -721,7 +736,7 @@ class AnalysisScreen(MDScreen):
     
     def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data"):
         self.results_container.clear_widgets()
-        self.results_container.spacing = "24dp"  # Increased spacing between sections
+        self.results_container.spacing = "24dp"
         self.results_container.padding = "16dp"
         
         source_name = "Unknown"
@@ -783,7 +798,6 @@ class AnalysisScreen(MDScreen):
             height="1dp"
         )
         with separator1.canvas:
-            from kivy.graphics import Color, Rectangle
             Color(0.8, 0.8, 0.8, 1)
             Rectangle(pos=separator1.pos, size=separator1.size)
         self.results_container.add_widget(separator1)
@@ -1060,7 +1074,7 @@ class AnalysisScreen(MDScreen):
             findings_layout.height = 30 + (len(analysis['key_findings'][:2]) * 48) + 12
             
             self.results_container.add_widget(findings_layout)
-
+    
     def set_analysis_type(self, button, analysis_type):
         for btn in self.analysis_buttons:
             btn.md_bg_color = [1, 1, 1, 0]
@@ -1151,13 +1165,10 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.disabled = False
         self.analyze_btn.text = "Start Analysis"
         
-        def remove_progress(dt):
-            if self.progress_layout.parent:
-                self.progress_layout.parent.remove_widget(self.progress_layout)
-            self.progress_value = 0
-            self.status_text = "Ready to analyze power structures"
-        
-        Clock.schedule_once(remove_progress, 0.5)
+        # Hide progress
+        self.progress_layout.opacity = 0
+        self.progress_value = 0
+        self.status_text = "Ready to analyze power structures"
         
         self.results_container.clear_widgets()
         error_item = TwoLineListItem(text="Analysis Failed", secondary_text=error_msg)
@@ -1178,6 +1189,7 @@ class AnalysisScreen(MDScreen):
             ],
         )
         help_dialog.open()
+
 
 class KrystalApp(MDApp):
     def __init__(self, **kwargs):
@@ -1213,6 +1225,7 @@ class KrystalApp(MDApp):
         else:
             print("Using mock news data.")
 
+
 def main():
     try:
         KrystalApp().run()
@@ -1220,6 +1233,7 @@ def main():
         print(f"App error: {e}")
         import traceback
         traceback.print_exc()
+
 
 if __name__ == '__main__':
     main()
