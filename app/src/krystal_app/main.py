@@ -1593,18 +1593,24 @@ class KrystalApp(MDApp):
     
     def build(self):
         self.title = "Krystal - Power Structure Mapper"
+        
+        # Set theme first - this affects how colors are interpreted
+        self.theme_cls.primary_palette = "Blue"
+        self.theme_cls.theme_style = "Light"  # Light theme may have different shadow behavior
+        
+        # Then set window background color
         Window.clearcolor = (0.95, 0.95, 0.98, 1)
         
         # Create screen manager
         sm = MDScreenManager()
-        
+   
         # Add screens
         welcome_screen = WelcomeScreen()
         analysis_screen = AnalysisScreen()
         
         sm.add_widget(welcome_screen)
         sm.add_widget(analysis_screen)
-        
+
         return sm
     
     def on_start(self):
