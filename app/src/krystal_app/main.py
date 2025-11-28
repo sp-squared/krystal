@@ -7,34 +7,28 @@ import kivy
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.window import Window
-from kivy.metrics import dp
-from kivy.properties import StringProperty, NumericProperty, ListProperty, BooleanProperty
-from kivy.graphics import Color, Line, Ellipse
 from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 import math
-import re
 
 # KivyMD Components
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.gridlayout import MDGridLayout
 from kivymd.uix.scrollview import MDScrollView
-from kivymd.uix.card import MDCard
 from kivymd.uix.label import MDLabel
-from kivymd.uix.button import MDRaisedButton, MDFlatButton, MDRoundFlatButton, MDIconButton
+from kivymd.uix.button import MDRaisedButton, MDFlatButton, MDIconButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.progressbar import MDProgressBar
-from kivymd.uix.list import MDList, OneLineListItem, TwoLineListItem, IconLeftWidget, OneLineAvatarIconListItem
+from kivymd.uix.list import TwoLineListItem
 from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.dialog import MDDialog
 
 # Core functionality
-from krystal.power_mapper import PowerMapper, create_sample_network
+from krystal.power_mapper import PowerMapper
 from krystal.data_sources import LittleSisClient, NewsClient
 
 
@@ -46,27 +40,22 @@ class NetworkGraphWidget(Widget):
         self.entities = entities
         self.relationships = relationships
         self.node_positions = {}
-        self.selected_node = None
         self.bind(size=self._update_graph, pos=self._update_graph)
         
     def _update_graph(self, *args):
-        """Update graph layout when widget size changes"""
         self.canvas.clear()
         self._draw_network()
     
     def _draw_network(self):
-        """Draw the network graph"""
         if not self.entities or not self.relationships:
             return
             
-        # Calculate node positions in a circle
         center_x = self.center_x
         center_y = self.center_y
         radius = min(self.width, self.height) * 0.35
         num_nodes = len(self.entities)
         
         with self.canvas:
-            # Draw relationships (edges)
             for rel in self.relationships:
                 source_id = rel.get('source')
                 target_id = rel.get('target')
@@ -75,13 +64,10 @@ class NetworkGraphWidget(Widget):
                     src_x, src_y = self.node_positions[source_id]
                     tgt_x, tgt_y = self.node_positions[target_id]
                     
-                    # Color based on relationship strength
                     strength = rel.get('strength', 0.5)
                     Color(0.3, 0.3, 0.8, strength)
-                    
                     Line(points=[src_x, src_y, tgt_x, tgt_y], width=1.5)
             
-            # Draw entities (nodes)
             for i, entity in enumerate(self.entities):
                 entity_id = entity.get('id')
                 angle = 2 * math.pi * i / num_nodes
@@ -90,66 +76,17 @@ class NetworkGraphWidget(Widget):
                 
                 self.node_positions[entity_id] = (x, y)
                 
-                # Color based on entity type
                 entity_type = entity.get('type', 'organization')
                 colors = {
-                    'person': (0.2, 0.8, 0.2),      # Green
-                    'corporation': (0.8, 0.2, 0.2), # Red
-                    'government': (0.2, 0.2, 0.8),  # Blue
-                    'organization': (0.8, 0.8, 0.2) # Yellow
+                    'person': (0.2, 0.8, 0.2),
+                    'corporation': (0.8, 0.2, 0.2),
+                    'government': (0.2, 0.2, 0.8),
+                    'organization': (0.8, 0.8, 0.2)
                 }
                 color = colors.get(entity_type, (0.5, 0.5, 0.5))
                 
                 Color(*color)
                 Ellipse(pos=(x-15, y-15), size=(30, 30))
-                
-                # Node label
-                Color(0, 0, 0, 1)
-    
-    def on_touch_down(self, touch):
-        """Handle node clicks"""
-        for entity_id, (x, y) in self.node_positions.items():
-            if abs(touch.x - x) < 20 and abs(touch.y - y) < 20:
-                entity = next((e for e in self.entities if e.get('id') == entity_id), None)
-                if entity:
-                    self.show_node_info(entity, touch)
-                return True
-        return super().on_touch_down(touch)
-    
-    def show_node_info(self, entity, touch):
-        """Show entity information when node is clicked"""
-        # Create a popup with entity details
-        content = BoxLayout(orientation='vertical', padding=10)
-        
-        name_label = Label(
-            text=f"🏢 {entity.get('name', 'Unknown')}",
-            font_size='16sp',
-            bold=True,
-            size_hint_y=None,
-            height=40
-        )
-        
-        type_label = Label(
-            text=f"Type: {entity.get('type', 'Unknown').title()}",
-            font_size='14sp'
-        )
-        
-        influence_label = Label(
-            text=f"Influence Score: {entity.get('influence_score', 0):.1f}",
-            font_size='14sp'
-        )
-        
-        content.add_widget(name_label)
-        content.add_widget(type_label)
-        content.add_widget(influence_label)
-        
-        popup = Popup(
-            title='Entity Details',
-            content=content,
-            size_hint=(0.6, 0.4),
-            auto_dismiss=True
-        )
-        popup.open()
 
 
 class WelcomeScreen(MDScreen):
@@ -159,44 +96,24 @@ class WelcomeScreen(MDScreen):
         self.build_ui()
     
     def build_ui(self):
-        # Main layout with gradient background
-        main_layout = MDBoxLayout(
-            orientation="vertical",
-            padding=dp(40),
-            spacing=dp(30),
-            md_bg_color=[0.95, 0.95, 0.98, 1]
-        )
+        main_layout = MDBoxLayout(orientation="vertical")
         
-        # Header section
-        header_layout = MDBoxLayout(
-            orientation="vertical",
-            spacing=dp(20),
-            size_hint_y=0.4
-        )
+        header_layout = MDBoxLayout(orientation="vertical")
         
-        # App icon - Using MDIconButton as a workaround
         self.icon_label = MDIconButton(
             icon="magnify",
-            theme_text_color="Custom",
-            text_color=[0.2, 0.5, 0.8, 1],
-            font_size="64sp",
             disabled=True
         )
         
-        # App title
-        title_layout = MDBoxLayout(orientation="vertical", spacing=dp(5))
+        title_layout = MDBoxLayout(orientation="vertical")
         title_label = MDLabel(
             text="KRYSTAL",
             font_style="H4",
-            bold=True,
-            theme_text_color="Custom",
-            text_color=[0.1, 0.3, 0.6, 1],
             halign="center"
         )
         subtitle_label = MDLabel(
             text="Power Structure Mapper",
             font_style="Subtitle1",
-            theme_text_color="Secondary",
             halign="center"
         )
         
@@ -206,26 +123,16 @@ class WelcomeScreen(MDScreen):
         header_layout.add_widget(self.icon_label)
         header_layout.add_widget(title_layout)
         
-        # Features section
-        features_card = MDCard(
-            orientation="vertical",
-            padding=dp(20),
-            spacing=dp(15),
-            size_hint_y=0.4,
-            elevation=0,
-            radius=[dp(15), dp(15), dp(15), dp(15)]
-        )
+        features_layout = MDBoxLayout(orientation="vertical")
         
         features_title = MDLabel(
             text="Discover Hidden Connections",
             font_style="H6",
-            theme_text_color="Primary",
             halign="center"
         )
         
-        features_list = MDBoxLayout(orientation="vertical", spacing=dp(10))
+        features_list = MDBoxLayout(orientation="vertical")
         
-        # Using MDIconButton for icons
         features = [
             ("magnify", "Analyze news articles for power structures"),
             ("chart-box", "Visualize relationship networks"),
@@ -234,81 +141,57 @@ class WelcomeScreen(MDScreen):
         ]
         
         for icon, text in features:
-            feature_item = MDBoxLayout(orientation="horizontal", spacing=dp(15))
+            feature_item = MDBoxLayout(orientation="horizontal")
             icon_widget = MDIconButton(
                 icon=icon,
-                theme_text_color="Primary",
-                size_hint_x=0.2,
-                disabled=True,
-                font_size="24sp"
+                disabled=True
             )
             text_label = MDLabel(
                 text=text,
-                font_style="Body2",
-                theme_text_color="Secondary",
-                size_hint_x=0.8
+                font_style="Body2"
             )
             feature_item.add_widget(icon_widget)
             feature_item.add_widget(text_label)
             features_list.add_widget(feature_item)
         
-        features_card.add_widget(features_title)
-        features_card.add_widget(features_list)
+        features_layout.add_widget(features_title)
+        features_layout.add_widget(features_list)
 
-        # Action buttons
-        action_layout = MDBoxLayout(
-            orientation="vertical",
-            spacing=dp(15),
-            size_hint_y=0.2
-        )
+        action_layout = MDBoxLayout(orientation="vertical")
         
         self.start_button = MDRaisedButton(
-            text="Start Analysis",
-            size_hint_y=None,
-            height=dp(50),
-            md_bg_color=[0.2, 0.6, 0.8, 1],
-            elevation=0
+            text="Start Analysis"
         )
         self.start_button.bind(on_press=self.start_analysis)
         
         sample_button = MDFlatButton(
-            text="Try Sample Data",
-            size_hint_y=None,
-            height=dp(40),
-            theme_text_color="Custom",
-            text_color=[0.2, 0.6, 0.8, 1]
+            text="Try Sample Data"
         )
         sample_button.bind(on_press=self.show_sample)
         
         action_layout.add_widget(self.start_button)
         action_layout.add_widget(sample_button)
         
-        # Assemble main layout
         main_layout.add_widget(header_layout)
-        main_layout.add_widget(features_card)
+        main_layout.add_widget(features_layout)
         main_layout.add_widget(action_layout)
         
         self.add_widget(main_layout)
     
     def start_analysis(self, instance):
-        """Navigate to analysis screen"""
         self.manager.current = 'analysis'
     
     def show_sample(self, instance):
-        """Show sample data preview"""
         sample_dialog = MDDialog(
             title="Sample Analysis",
-            text="This will load a demonstration with sample power structure data showing how Krystal analyzes relationships between corporations, government entities, and influential organizations.",
+            text="This will load a demonstration with sample power structure data.",
             buttons=[
                 MDFlatButton(
                     text="Cancel",
-                    theme_text_color="Custom",
-                    text_color=[0.5, 0.5, 0.5, 1],
                     on_release=lambda x: sample_dialog.dismiss()
                 ),
                 MDRaisedButton(
                     text="Load Sample",
-                    md_bg_color=[0.2, 0.6, 0.8, 1],
                     on_release=lambda x: self.load_sample_data(sample_dialog)
                 ),
             ],
@@ -316,7 +199,6 @@ class WelcomeScreen(MDScreen):
         sample_dialog.open()
     
     def load_sample_data(self, dialog):
-        """Load sample data and navigate to analysis"""
         dialog.dismiss()
         self.manager.current = 'analysis'
         analysis_screen = self.manager.get_screen('analysis')
@@ -324,8 +206,6 @@ class WelcomeScreen(MDScreen):
 
 
 class AnalysisScreen(MDScreen):
-    """Modern analysis screen with enhanced UX and News API integration"""
-    
     progress_value = NumericProperty(0)
     status_text = StringProperty("Ready to analyze power structures")
     is_analyzing = BooleanProperty(False)
@@ -334,344 +214,160 @@ class AnalysisScreen(MDScreen):
         super().__init__(**kwargs)
         self.name = "analysis"
         
-        # Initialize core components
         self.mapper = PowerMapper()
         self.news_client = NewsClient()
         self.littlesis_client = LittleSisClient()
         
-        self.dialog = None
         self.active_analysis_type = "News"
         self.active_news_category = None
         self.current_analysis = None
         Clock.schedule_once(lambda dt: self.build_ui(), 0.1)
     
     def build_ui(self):
-        # Main layout
         main_layout = MDBoxLayout(orientation="vertical")
         
-        # Top App Bar
         self.top_bar = MDTopAppBar(
             title="Power Analysis",
-            elevation=0,
-            md_bg_color=[0.2, 0.6, 0.8, 1],
-            specific_text_color=[1, 1, 1, 1],
             left_action_items=[["arrow-left", lambda x: self.go_back()]],
             right_action_items=[
                 ["chart-box", lambda x: self.show_network_visualization()],
                 ["help", lambda x: self.show_help()],
-                ["cog", lambda x: self.show_settings()],
             ]
         )
         main_layout.add_widget(self.top_bar)
         
-        # Content area with scrolling for the entire screen
-        self.content_scroll = MDScrollView(
-            do_scroll_x=False,
-            bar_width=dp(4),
-            bar_color=[0.2, 0.6, 0.8, 0.5]
-        )
-        self.content_layout = MDBoxLayout(orientation="vertical", padding=dp(20), spacing=dp(20), size_hint_y=None)
+        self.content_scroll = MDScrollView()
+        self.content_layout = MDBoxLayout(orientation="vertical", size_hint_y=None)
         self.content_layout.bind(minimum_height=self.content_layout.setter('height'))
         
-        # Input Card
-        input_card = MDCard(
-            orientation="vertical",
-            padding=dp(20),
-            spacing=dp(15),
-            elevation=0,
-            radius=[dp(15), dp(15), dp(15), dp(15)],
-            size_hint_y=None,
-            height=dp(300)
-        )
+        input_layout = MDBoxLayout(orientation="vertical")
         
         input_title = MDLabel(
             text="Analyze Power Structures",
-            font_style="H6",
-            theme_text_color="Primary"
+            font_style="H6"
         )
         
         self.url_input = MDTextField(
             hint_text="Enter news URL or search terms...",
-            mode="round",
-            size_hint_y=None,
-            height=dp(56),
             icon_left="magnify"
         )
         
-        # Analysis type buttons
-        analysis_layout = MDBoxLayout(orientation="horizontal", spacing=dp(10), adaptive_height=True)
-        analysis_types = [
-            ("News", "newspaper"),
-            ("Organization", "office-building"),
-            ("Person", "account"),
-            ("Topic", "tag")
-        ]
+        analysis_layout = MDBoxLayout(orientation="horizontal")
+        analysis_types = ["News", "Organization", "Person", "Topic"]
         
         self.analysis_buttons = []
-        for text, icon in analysis_types:
-            btn = MDRoundFlatButton(
-                text=text,
-                icon=icon,
-                size_hint_x=None,
-                width=dp(120),
-                theme_text_color="Custom",
-                text_color=[0.5, 0.5, 0.5, 1],
-                line_color=[0.8, 0.8, 0.8, 1]
-            )
+        for text in analysis_types:
+            btn = MDRaisedButton(text=text)
             btn.bind(on_release=lambda x, t=text: self.set_analysis_type(x, t))
             analysis_layout.add_widget(btn)
             self.analysis_buttons.append(btn)
         
-        # Set first button as active
         if self.analysis_buttons:
             self.set_analysis_type(self.analysis_buttons[0], "News")
         
-        # News category selection
-        category_layout = MDBoxLayout(orientation="horizontal", spacing=dp(10), adaptive_height=True)
-        category_label = MDLabel(
-            text="Category:",
-            font_style="Body2",
-            theme_text_color="Secondary",
-            size_hint_x=0.3
-        )
+        category_layout = MDBoxLayout(orientation="horizontal")
+        category_label = MDLabel(text="Category:")
         
-        # News categories dropdown
         self.category_buttons = []
-        categories = ["All", "Technology", "Business", "Politics", "General"]
+        categories = ["All", "Technology", "Business", "Politics"]
         
-        category_buttons_layout = MDBoxLayout(orientation="horizontal", spacing=dp(5), adaptive_height=True)
         for category in categories:
-            btn = MDRoundFlatButton(
-                text=category,
-                size_hint_x=None,
-                width=dp(80),
-                theme_text_color="Custom",
-                text_color=[0.5, 0.5, 0.5, 1],
-                line_color=[0.8, 0.8, 0.8, 1]
-            )
+            btn = MDRaisedButton(text=category)
             btn.bind(on_release=lambda x, c=category: self.set_news_category(x, c))
-            category_buttons_layout.add_widget(btn)
+            category_layout.add_widget(btn)
             self.category_buttons.append(btn)
         
-        # Set "All" as default category
         if self.category_buttons:
             self.set_news_category(self.category_buttons[0], "All")
         
-        category_layout.add_widget(category_label)
-        category_layout.add_widget(category_buttons_layout)
-        
-        # Action buttons
-        button_layout = MDBoxLayout(orientation="horizontal", spacing=dp(15), adaptive_height=True)
+        button_layout = MDBoxLayout(orientation="horizontal")
         
         self.analyze_btn = MDRaisedButton(
             text="Start Analysis",
-            size_hint_x=0.7,
-            md_bg_color=[0.2, 0.6, 0.8, 1],
-            elevation=0,
             on_release=self.analyze_article
         )
         
         sample_btn = MDFlatButton(
             text="Quick Sample",
-            size_hint_x=0.3,
-            theme_text_color="Custom",
-            text_color=[0.5, 0.5, 0.5, 1],
             on_release=lambda x: self.load_sample_data()
         )
         
         button_layout.add_widget(self.analyze_btn)
         button_layout.add_widget(sample_btn)
         
-        input_card.add_widget(input_title)
-        input_card.add_widget(self.url_input)
-        input_card.add_widget(analysis_layout)
-        input_card.add_widget(category_layout)
-        input_card.add_widget(button_layout)
-        self.content_layout.add_widget(input_card)
+        input_layout.add_widget(input_title)
+        input_layout.add_widget(self.url_input)
+        input_layout.add_widget(analysis_layout)
+        input_layout.add_widget(category_layout)
+        input_layout.add_widget(button_layout)
+        self.content_layout.add_widget(input_layout)
         
-        # Progress Card - CREATE BUT DON'T ADD TO LAYOUT INITIALLY
-        self.progress_card = MDCard(
-            orientation="vertical",
-            padding=dp(20),
-            spacing=dp(15),
-            elevation=0,
-            radius=[dp(15), dp(15), dp(15), dp(15)],
-            size_hint_y=None,
-            height=dp(120)
-        )
+        self.progress_layout = MDBoxLayout(orientation="vertical")
         
-        progress_title = MDLabel(
-            text="Analysis Progress",
-            font_style="H6",
-            theme_text_color="Primary"
-        )
+        progress_title = MDLabel(text="Analysis Progress")
         
-        self.status_label = MDLabel(
-            text=self.status_text,
-            font_style="Body1",
-            theme_text_color="Secondary"
-        )
+        self.status_label = MDLabel(text=self.status_text)
         
-        self.progress_bar = MDProgressBar(
-            value=self.progress_value,
-        )
+        self.progress_bar = MDProgressBar(value=self.progress_value)
         
-        self.progress_card.add_widget(progress_title)
-        self.progress_card.add_widget(self.status_label)
-        self.progress_card.add_widget(self.progress_bar)
+        self.progress_layout.add_widget(progress_title)
+        self.progress_layout.add_widget(self.status_label)
+        self.progress_layout.add_widget(self.progress_bar)
         
-        # Results Section
-        results_title = MDLabel(
-            text="Analysis Results",
-            font_style="H6",
-            theme_text_color="Primary",
-            size_hint_y=None,
-            height=dp(40)
-        )
+        results_title = MDLabel(text="Analysis Results")
         self.content_layout.add_widget(results_title)
         
-        # Results container
-        self.results_container = MDBoxLayout(
-            orientation="vertical",
-            spacing=dp(15),
-            size_hint_y=None,
-            adaptive_height=True
-        )
+        self.results_container = MDBoxLayout(orientation="vertical")
         self.content_layout.add_widget(self.results_container)
         
-        # Set up the scroll view
         self.content_scroll.add_widget(self.content_layout)
         main_layout.add_widget(self.content_scroll)
         
         self.add_widget(main_layout)
     
     def show_network_visualization(self, instance=None):
-        """Show interactive network visualization using Popup (shadow-free)"""
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
             self.show_message("Run an analysis first to see the network")
             return
         
-        # Create visualization content
-        content = BoxLayout(orientation='vertical', spacing=10, padding=10)
+        content = BoxLayout(orientation='vertical')
         
-        # Create network graph
         entities = self.current_analysis.get('influence_rankings', [])
         relationships = self.current_analysis.get('relationships', [])
         
         if entities and relationships:
             network_widget = NetworkGraphWidget(entities, relationships)
-            network_widget.size_hint = (1, 0.8)
             content.add_widget(network_widget)
         else:
-            # Fallback: show entity distribution
-            viz_label = Label(
-                text="Power Network Structure",
-                font_size='18sp',
-                halign="center",
-                size_hint_y=None,
-                height=40
-            )
+            viz_label = Label(text="Power Network Structure")
             content.add_widget(viz_label)
-            
-            # Show entity type distribution
-            type_layout = BoxLayout(orientation='horizontal', spacing=10, padding=20)
-            
-            type_counts = {}
-            for entity in entities:
-                entity_type = entity.get('type', 'unknown')
-                type_counts[entity_type] = type_counts.get(entity_type, 0) + 1
-            
-            for entity_type, count in type_counts.items():
-                type_item = BoxLayout(orientation='vertical', spacing=5)
-                
-                count_label = Label(
-                    text=str(count),
-                    font_size='24sp',
-                    halign="center"
-                )
-                
-                type_label = Label(
-                    text=entity_type.title(),
-                    font_size='12sp',
-                    halign="center"
-                )
-                
-                type_item.add_widget(count_label)
-                type_item.add_widget(type_label)
-                type_layout.add_widget(type_item)
-            
-            content.add_widget(type_layout)
         
-        # Use basic Popup with no styling
         popup = Popup(
             title='Network Visualization',
             content=content,
-            size_hint=(0.9, 0.8),
-            background='',  # No background
-            separator_height=0  # No separator line
+            size_hint=(0.9, 0.8)
         )
-        
-        # Manually set background color
-        popup.background_color = [1, 1, 1, 1]
-        
         popup.open()
 
     def extract_keywords_from_url(self, url: str) -> str:
-        """Extract meaningful keywords from a URL for news search"""
         try:
-            print(f"🔗 Processing URL: {url}")
-            
-            # Remove protocol and domain
             if '://' in url:
                 url = url.split('://', 1)[1]
             
-            # Remove www and domain
             if url.startswith('www.'):
                 url = url[4:]
             
-            # Extract path (remove domain)
             if '/' in url:
                 domain, path = url.split('/', 1)
             else:
                 domain, path = url, ""
             
-            # Common news domains to ignore in search
-            news_domains = ['cnn.com', 'bbc.com', 'reuters.com', 'apnews.com', 'theguardian.com', 
-                           'nytimes.com', 'washingtonpost.com', 'foxnews.com', 'nbcnews.com',
-                           'wsj.com', 'bloomberg.com', 'latimes.com', 'usatoday.com']
-            
-            # If it's a known news domain, focus on the path
-            if any(domain in nd or nd in domain for nd in news_domains):
-                keywords_source = path
-            else:
-                keywords_source = url
-            
-            # Clean up the path
             import re
-            
-            # Remove date patterns (YYYY/MM/DD or YYYY-MM-DD)
-            keywords_source = re.sub(r'\d{4}[-/]\d{2}[-/]\d{2}', '', keywords_source)
-            
-            # Remove common URL suffixes and technical parts
-            remove_patterns = [
-                r'-\w+$',  # trailing slugs like -intl, -hnk
-                r'\.(html|php|aspx)$',  # file extensions
-                r'/index$',  # index pages
-                r'/\d+$',  # trailing numbers
-                r'[?&].*$',  # query parameters
-            ]
-            
-            for pattern in remove_patterns:
-                keywords_source = re.sub(pattern, '', keywords_source)
-            
-            # Replace separators with spaces and clean up
+            keywords_source = re.sub(r'\d{4}[-/]\d{2}[-/]\d{2}', '', path)
             keywords = keywords_source.replace('-', ' ').replace('/', ' ').replace('_', ' ')
-            keywords = ' '.join(keywords.split()).strip()  # Remove extra spaces
-            
-            # Convert to title case for better display
+            keywords = ' '.join(keywords.split()).strip()
             keywords = keywords.title()
             
-            # If we have no meaningful keywords, use domain-based fallback
             if not keywords or len(keywords) < 3:
                 domain_keywords = domain.replace('.com', '').replace('.org', '').replace('.net', '')
                 if domain_keywords and domain_keywords not in ['www', 'news']:
@@ -679,45 +375,33 @@ class AnalysisScreen(MDScreen):
                 else:
                     keywords = "Current Events"
             
-            # Final cleanup: remove any remaining numbers and short words
-            keywords = re.sub(r'\b\d+\b', '', keywords)  # Remove standalone numbers
-            keywords = ' '.join([word for word in keywords.split() if len(word) > 2])  # Remove short words
+            keywords = re.sub(r'\b\d+\b', '', keywords)
+            keywords = ' '.join([word for word in keywords.split() if len(word) > 2])
             keywords = keywords.strip()
             
             if not keywords:
                 keywords = "Breaking News"
             
-            print(f"🔍 Extracted topic: {keywords}")
             return keywords
             
         except Exception as e:
-            print(f"Error extracting keywords from URL: {e}")
             return "Breaking News"
     
     def analyze_article(self, instance):
-        """Start analysis with enhanced UX - URL AWARE VERSION"""
         query = self.url_input.text.strip()
         if not query:
             self.show_message("Please enter a URL or search terms")
             return
         
-        # Check if input is a URL and extract keywords
         is_url = False
         original_query = query
         
         if query.startswith(('http://', 'https://', 'www.')):
             is_url = True
             query = self.extract_keywords_from_url(query)
-            print(f"🔗 URL detected: {original_query}")
-            print(f"🔍 Searching for topic: {query}")
-            
-            # Show user what we're actually searching for
             self.show_message(f"Analyzing topic: {query}")
-            
-            # Optional: Update the input field to show the extracted keywords
             self.url_input.text = query
         
-        # Use category if specified
         category = getattr(self, 'active_news_category', None)
         
         if self.is_analyzing:
@@ -727,40 +411,29 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.disabled = True
         self.analyze_btn.text = "Analyzing..."
         
-        # Add progress card to layout and show it
-        if self.progress_card.parent is None:
-            # Add progress card after input card but before results
-            input_card_index = self.content_layout.children.index(self.results_container) + 1
-            self.content_layout.add_widget(self.progress_card, index=input_card_index)
+        if self.progress_layout.parent is None:
+            self.content_layout.add_widget(self.progress_layout)
         
-        # Clear previous results
         self.results_container.clear_widgets()
         
-        # Add initial status item with context about what we're analyzing
         if is_url:
             status_text = f"Analyzing: {query}"
-            secondary_text = f"From URL: {original_query[:50]}..." if len(original_query) > 50 else f"From URL: {original_query}"
+            secondary_text = f"From URL: {original_query}"
         else:
-            category_text = f" (Category: {category})" if category and category != "all" else ""
-            status_text = f"Starting {self.active_analysis_type} analysis{category_text}"
+            status_text = f"Starting {self.active_analysis_type} analysis"
             secondary_text = f"Search: {query}"
         
-        initial_item = TwoLineListItem(
-            text=status_text,
-            secondary_text=secondary_text
-        )
+        initial_item = TwoLineListItem(text=status_text, secondary_text=secondary_text)
         self.results_container.add_widget(initial_item)
         
-        # Start analysis process with category
         Clock.schedule_once(lambda dt: self._perform_analysis(query, category), 0.5)
     
     def _perform_analysis(self, query, category=None):
-        """Perform analysis with detailed progress updates - URL AWARE"""
         try:
             steps = [
-                (20, f"Searching {category if category else 'all'} news..." if not query.startswith('http') else "Analyzing news topic..."),
-                (40, "Extracting entities and organizations..."),
-                (60, "Mapping relationships and connections..."),
+                (20, "Searching news..."),
+                (40, "Extracting entities..."),
+                (60, "Mapping relationships..."),
                 (80, "Analyzing power structures..."),
                 (95, "Finalizing results..."),
                 (100, "Analysis complete!")
@@ -771,27 +444,21 @@ class AnalysisScreen(MDScreen):
                     progress, status = steps[step_index]
                     self.update_progress(progress, status)
                     
-                    # Update the status in results list
                     if step_index > 0:
                         self.results_container.children[0].text = status
                         self.results_container.children[0].secondary_text = f"Progress: {progress}%"
                     
-                    # Schedule next step
                     Clock.schedule_once(lambda dt: update_step(step_index + 1), 1)
                 else:
-                    # Analysis complete
                     self._analysis_complete(query, category)
         
-            # Start the step-by-step progress
             update_step(0)
             
         except Exception as e:
             self._analysis_error(str(e))
     
     def _analysis_complete(self, query, category=None):
-        """Handle analysis completion with category - WITH URL DETECTION & DISPLAY"""
         try:
-            # URL detection at the start
             original_query = query
             extracted_topic = None
             is_url = False
@@ -800,60 +467,36 @@ class AnalysisScreen(MDScreen):
                 is_url = True
                 extracted_topic = self.extract_keywords_from_url(query)
                 query = extracted_topic
-                print(f"🔗 URL detected: {original_query}")
-                print(f"🔍 Extracted topic: {extracted_topic}")
             
-            # Get real news data with category
             articles = []
             if self.active_analysis_type == "News":
                 if category and category != "all":
-                    # Use category for top headlines
-                    articles = self.news_client.get_top_headlines(
-                        category=category, 
-                        max_results=5
-                    )
+                    articles = self.news_client.get_top_headlines(category=category, max_results=5)
                 else:
-                    # Use search for general queries
                     articles = self.news_client.search_news(query, max_results=5)
             else:
-                # For other analysis types, use search
                 articles = self.news_client.search_news(query, max_results=5)
             
             if not articles:
-                if is_url:
-                    self._analysis_error(f"No news found for topic: '{extracted_topic}'. Try different search terms.")
-                else:
-                    self._analysis_error("No articles found for your search. Try different terms or category.")
+                self._analysis_error("No articles found for your search.")
                 return
             
-            # Show API status with URL context if applicable
             api_status = "[MOCK] Mock Data" if not self.news_client.is_api_available() else "[LIVE] Real News API"
             
-            if is_url:
-                self.show_message(f"Using {api_status} | Topic: {extracted_topic}")
-            else:
-                self.show_message(f"Using {api_status}")            
-            
-            # Extract entities from articles (ONLY ONCE - no duplicates)
             entities = []
             for article in articles:
-                # Combine title and content for entity extraction
                 text_content = f"{article.get('title', '')} {article.get('description', '')} {article.get('content', '')}"
                 if text_content.strip():
-                    # Extract entities from article content
                     article_entities = self.news_client.extract_entities(text_content, query)
                     entities.extend(article_entities)
                 
-                # ALSO include entities that were already extracted by NewsClient during article fetching
                 if 'entities' in article and article['entities']:
                     entities.extend(article['entities'])
             
-            # Remove duplicates based on entity name and ensure structure
             unique_entities = {}
             for entity in entities:
                 name = entity.get('name', '')
                 if name and name not in unique_entities:
-                    # Ensure entity has basic structure
                     if 'id' not in entity:
                         entity['id'] = f"{name.lower().replace(' ', '_')}_{hash(name) % 10000}"
                     if 'type' not in entity:
@@ -862,15 +505,12 @@ class AnalysisScreen(MDScreen):
             
             entities = list(unique_entities.values())
             
-            # If no entities found in articles, create some from the query
             if not entities:
                 entities = self._create_entities_from_query(query)
             
-            # Get LittleSis entities based on the discovered entity names
             entity_names = [entity['name'] for entity in entities if 'name' in entity]
             ls_entities = self.littlesis_client.search_entities(entity_names)
             
-            # Ensure LittleSis entities have proper structure
             for entity in ls_entities:
                 if 'id' not in entity:
                     name = entity.get('name', 'unknown')
@@ -878,54 +518,40 @@ class AnalysisScreen(MDScreen):
             
             entities.extend(ls_entities)
             
-            # Final cleanup - ensure all entities have IDs and remove duplicates
             final_entities = []
             seen_ids = set()
             for entity in entities:
-                # Ensure ID exists
                 if 'id' not in entity:
                     name = entity.get('name', 'unknown')
                     entity['id'] = f"final_{name.lower().replace(' ', '_')}_{hash(name) % 10000}"
                 
-                # Remove duplicates by ID
                 if entity['id'] not in seen_ids:
                     final_entities.append(entity)
                     seen_ids.add(entity['id'])
             
             entities = final_entities
             
-            # Get relationships (with better error handling)
             relationships = []
-            for entity in entities[:5]:  # Limit to avoid too many API calls
+            for entity in entities[:5]:
                 try:
                     entity_id = entity.get('id')
                     entity_name = entity.get('name', '')
                     if entity_id and entity_name:
-                        # Ensure entity_id is properly formatted for LittleSis
                         if isinstance(entity_id, str) and not entity_id.isdigit():
-                            # Convert string ID to numeric for consistency
                             entity_id = abs(hash(entity_id)) % 100000
                         
                         connections = self.littlesis_client.get_entity_connections(entity_id, entity_name, max_connections=3)
                         relationships.extend(connections)
                 except Exception as e:
-                    print(f"Failed to get connections for {entity.get('name', 'unknown')}: {e}")
                     continue
             
-            # If no relationships found, create some sample ones
             if not relationships:
                 relationships = self._create_sample_relationships(entities)
             
-            print(f"DEBUG: Starting analysis with {len(entities)} entities and {len(relationships)} relationships")
-            
-            # Perform actual analysis with error handling
             try:
                 analysis = self.mapper.analyze_network(entities, relationships)
-                # Store relationships in analysis for visualization
                 analysis['relationships'] = relationships
             except Exception as e:
-                print(f"PowerMapper analysis error: {e}")
-                # Create a basic analysis result
                 analysis = {
                     "summary": {
                         "entity_count": len(entities),
@@ -941,45 +567,29 @@ class AnalysisScreen(MDScreen):
                     "relationships": relationships
                 }
             
-            # Store current analysis for visualization
             self.current_analysis = analysis
             
-            # Clear loading item and display results with URL context
             self.results_container.clear_widgets()
-            self.display_analysis_results(analysis, articles[0], api_status, 
-                                        original_url=original_query if is_url else None,
-                                        extracted_topic=extracted_topic if is_url else None)
+            self.display_analysis_results(analysis, articles[0], api_status)
             
-            # Reset UI state
             self.is_analyzing = False
             self.analyze_btn.disabled = False
             self.analyze_btn.text = "Start Analysis"
             
-            # Completely remove progress card instead of just hiding it
-            def remove_progress_card(dt):
-                # Remove the progress card from layout to prevent shadow artifacts
-                if self.progress_card.parent:
-                    self.progress_card.parent.remove_widget(self.progress_card)
-                # Reset progress values
+            def remove_progress(dt):
+                if self.progress_layout.parent:
+                    self.progress_layout.parent.remove_widget(self.progress_layout)
                 self.progress_value = 0
                 self.status_text = "Ready to analyze power structures"
             
-            Clock.schedule_once(remove_progress_card, 0.5)
+            Clock.schedule_once(remove_progress, 0.5)
             
         except Exception as e:
-            print(f"Analysis complete error: {e}")
-            import traceback
-            traceback.print_exc()
             self._analysis_error(f"Analysis failed: {str(e)}")
     
-    def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data", 
-                            original_url=None, extracted_topic=None):
-        """Display beautiful analysis results in the results container using flat design"""
-        
-        # Clear previous results from the container
+    def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data"):
         self.results_container.clear_widgets()
         
-        # Safely extract source information
         source_name = "Unknown"
         try:
             source_data = article.get('source', {})
@@ -990,137 +600,32 @@ class AnalysisScreen(MDScreen):
         except:
             source_name = "Unknown"
         
-        # Header section with source info - FLAT STYLING
-        header_container = MDBoxLayout(
-            orientation="vertical",
-            padding=dp(20),
-            spacing=dp(10),
-            size_hint_y=None,
-            height=dp(120),
-            md_bg_color=[0.95, 0.97, 1.0, 1],
-            radius=[dp(15), dp(15), dp(15), dp(15)]
-        )
+        header_layout = MDBoxLayout(orientation="vertical")
         
-        # Article title
         title_label = MDLabel(
             text=article.get('title', 'Analysis Results'),
             font_style="H6",
-            theme_text_color="Primary",
-            halign="center",
-            size_hint_y=None,
-            height=dp(40)
+            halign="center"
         )
         
-        # Source and API status
-        source_layout = MDBoxLayout(orientation="horizontal", adaptive_height=True)
-        source_label = MDLabel(
-            text=f"Source: {source_name}",
-            font_style="Body2",
-            theme_text_color="Secondary",
-            size_hint_x=0.6
-        )
-        api_label = MDLabel(
-            text=api_status,
-            font_style="Caption",
-            theme_text_color="Custom",
-            text_color=[0.2, 0.7, 0.3, 1] if "LIVE" in api_status else [0.8, 0.2, 0.2, 1],
-            halign="right",
-            size_hint_x=0.4
-        )
+        source_layout = MDBoxLayout(orientation="horizontal")
+        source_label = MDLabel(text=f"Source: {source_name}")
+        api_label = MDLabel(text=api_status)
         
         source_layout.add_widget(source_label)
         source_layout.add_widget(api_label)
-        header_container.add_widget(title_label)
-        header_container.add_widget(source_layout)
+        header_layout.add_widget(title_label)
+        header_layout.add_widget(source_layout)
         
-        self.results_container.add_widget(header_container)
+        self.results_container.add_widget(header_layout)
         
-        # URL context if applicable - FLAT STYLING
-        if original_url and extracted_topic:
-            url_container = MDBoxLayout(
-                orientation="horizontal",
-                padding=dp(20),
-                spacing=dp(15),
-                size_hint_y=None,
-                height=dp(80),
-                md_bg_color=[0.98, 0.98, 0.98, 1],
-                radius=[dp(10), dp(10), dp(10), dp(10)]
-            )
-            
-            url_icon = MDIconButton(
-                icon="link",
-                theme_text_color="Primary",
-                disabled=True
-            )
-            
-            url_content = MDBoxLayout(orientation="vertical", spacing=dp(5))
-            url_title = MDLabel(
-                text="URL Analysis",
-                font_style="Body2",
-                theme_text_color="Primary"
-            )
-            url_subtitle = MDLabel(
-                text=f"Topic: {extracted_topic}",
-                font_style="Caption",
-                theme_text_color="Secondary"
-            )
-            url_content.add_widget(url_title)
-            url_content.add_widget(url_subtitle)
-            
-            url_container.add_widget(url_icon)
-            url_container.add_widget(url_content)
-            self.results_container.add_widget(url_container)
-        
-        # API help if using mock data - FLAT STYLING
-        if "Mock" in api_status:
-            help_container = MDBoxLayout(
-                orientation="horizontal",
-                padding=dp(20),
-                spacing=dp(15),
-                size_hint_y=None,
-                height=dp(60),
-                md_bg_color=[1.0, 0.95, 0.9, 1],
-                radius=[dp(10), dp(10), dp(10), dp(10)]
-            )
-            
-            help_icon = MDIconButton(
-                icon="alert-circle",
-                theme_text_color="Custom",
-                text_color=[0.9, 0.6, 0.1, 1],
-                disabled=True
-            )
-            
-            help_label = MDLabel(
-                text="Set NEWS_API_KEY for real news data",
-                font_style="Caption",
-                theme_text_color="Secondary"
-            )
-            
-            help_container.add_widget(help_icon)
-            help_container.add_widget(help_label)
-            self.results_container.add_widget(help_container)
-        
-        # Network Overview Section - FLAT STYLING
         if analysis.get('summary', {}).get('entity_count', 0) > 0:
-            overview_container = MDBoxLayout(
-                orientation="vertical",
-                padding=dp(20),
-                spacing=dp(15),
-                size_hint_y=None,
-                height=dp(180),
-                md_bg_color=[1, 1, 1, 1],
-                radius=[dp(15), dp(15), dp(15), dp(15)]
-            )
+            overview_layout = MDBoxLayout(orientation="vertical")
             
-            overview_title = MDLabel(
-                text="Network Overview",
-                font_style="H6",
-                theme_text_color="Primary"
-            )
-            overview_container.add_widget(overview_title)
+            overview_title = MDLabel(text="Network Overview")
+            overview_layout.add_widget(overview_title)
             
-            # Stats in a grid
-            stats_grid = MDGridLayout(cols=2, spacing=dp(15), padding=dp(10), adaptive_height=True)
+            stats_layout = MDBoxLayout(orientation="horizontal")
             
             summary = analysis.get('summary', {})
             stats_data = [
@@ -1131,333 +636,133 @@ class AnalysisScreen(MDScreen):
             ]
             
             for label, value in stats_data:
-                stat_item = MDBoxLayout(orientation="vertical", spacing=dp(5))
-                value_label = MDLabel(
-                    text=value,
-                    font_style="H5",
-                    theme_text_color="Primary",
-                    halign="center"
-                )
-                label_label = MDLabel(
-                    text=label,
-                    font_style="Caption",
-                    theme_text_color="Secondary",
-                    halign="center"
-                )
+                stat_item = MDBoxLayout(orientation="vertical")
+                value_label = MDLabel(text=value)
+                label_label = MDLabel(text=label)
                 stat_item.add_widget(value_label)
                 stat_item.add_widget(label_label)
-                stats_grid.add_widget(stat_item)
+                stats_layout.add_widget(stat_item)
             
-            overview_container.add_widget(stats_grid)
-            self.results_container.add_widget(overview_container)
+            overview_layout.add_widget(stats_layout)
+            self.results_container.add_widget(overview_layout)
         
-        # Entity Distribution - FLAT STYLING
         entities = analysis.get('influence_rankings', [])
         if entities:
-            # Entity type distribution
+            distribution_layout = MDBoxLayout(orientation="vertical")
+            
+            distribution_title = MDLabel(text="Entity Distribution")
+            distribution_layout.add_widget(distribution_title)
+            
+            type_layout = MDBoxLayout(orientation="horizontal")
+            
             type_counts = {}
             for entity in entities:
                 entity_type = entity.get('type', 'unknown')
                 type_counts[entity_type] = type_counts.get(entity_type, 0) + 1
             
-            distribution_container = MDBoxLayout(
-                orientation="vertical",
-                padding=dp(20),
-                spacing=dp(15),
-                size_hint_y=None,
-                height=dp(140),
-                md_bg_color=[0.98, 0.98, 0.98, 1],
-                radius=[dp(15), dp(15), dp(15), dp(15)]
-            )
-            
-            distribution_title = MDLabel(
-                text="Entity Distribution",
-                font_style="H6",
-                theme_text_color="Primary"
-            )
-            distribution_container.add_widget(distribution_title)
-            
-            # Entity types in a row
-            type_layout = MDBoxLayout(orientation="horizontal", spacing=dp(15), adaptive_height=True)
-            
-            type_icons = {
-                'person': "account",
-                'corporation': "office-building", 
-                'government': "government",
-                'organization': "account-group"
-            }
-            
             for entity_type, count in type_counts.items():
-                type_item = MDBoxLayout(
-                    orientation="vertical",
-                    spacing=dp(5),
-                    size_hint_x=None,
-                    width=dp(80)
-                )
-                
-                icon_widget = MDIconButton(
-                    icon=type_icons.get(entity_type, "help-circle"),
-                    theme_text_color="Primary",
-                    font_size="24sp",
-                    disabled=True
-                )
-                
-                count_label = MDLabel(
-                    text=str(count),
-                    font_style="Body1",
-                    theme_text_color="Primary",
-                    halign="center"
-                )
-                
-                type_label = MDLabel(
-                    text=entity_type.title(),
-                    font_style="Caption",
-                    theme_text_color="Secondary",
-                    halign="center"
-                )
-                
-                type_item.add_widget(icon_widget)
+                type_item = MDBoxLayout(orientation="vertical")
+                count_label = MDLabel(text=str(count))
+                type_label = MDLabel(text=entity_type.title())
                 type_item.add_widget(count_label)
                 type_item.add_widget(type_label)
                 type_layout.add_widget(type_item)
             
-            distribution_container.add_widget(type_layout)
-            self.results_container.add_widget(distribution_container)
+            distribution_layout.add_widget(type_layout)
+            self.results_container.add_widget(distribution_layout)
         
-        # Top Influencers - FLAT STYLING  
         if analysis['influence_rankings']:
-            influencers_container = MDBoxLayout(
-                orientation="vertical",
-                padding=dp(20),
-                spacing=dp(15),
-                size_hint_y=None,
-                height=dp(320),
-                md_bg_color=[1, 1, 1, 1],
-                radius=[dp(15), dp(15), dp(15), dp(15)]
-            )
+            influencers_layout = MDBoxLayout(orientation="vertical")
             
-            influencers_title = MDLabel(
-                text="Most Influential Entities",
-                font_style="H6",
-                theme_text_color="Primary"
-            )
-            influencers_container.add_widget(influencers_title)
+            influencers_title = MDLabel(text="Most Influential Entities")
+            influencers_layout.add_widget(influencers_title)
             
-            for i, entity in enumerate(analysis['influence_rankings'][:4]):  # Show top 4
+            for i, entity in enumerate(analysis['influence_rankings'][:4]):
                 score = entity.get('influence_score', 0)
                 
-                influencer_item = MDBoxLayout(
-                    orientation="horizontal",
-                    adaptive_height=True,
-                    spacing=dp(15),
-                    padding=dp(10)
-                )
+                influencer_item = MDBoxLayout(orientation="horizontal")
                 
-                # Rank badge - FLAT STYLING
-                rank_container = MDBoxLayout(
-                    size_hint=(None, None),
-                    size=(dp(40), dp(40)),
-                    md_bg_color=[0.2, 0.6, 0.8, 1],
-                    radius=[dp(20), dp(20), dp(20), dp(20)]
-                )
-                rank_label = MDLabel(
-                    text=str(i+1),
-                    font_style="H6",
-                    theme_text_color="Custom",
-                    text_color=[1, 1, 1, 1],
-                    halign="center",
-                    valign="center"
-                )
-                rank_container.add_widget(rank_label)
+                rank_label = MDLabel(text=str(i+1))
                 
-                # Entity info
-                info_layout = MDBoxLayout(orientation="vertical", spacing=dp(2), size_hint_x=0.5)
-                name_label = MDLabel(
-                    text=entity['name'],
-                    font_style="Body1",
-                    theme_text_color="Primary",
-                    size_hint_y=None,
-                    height=dp(25)
-                )
-                type_label = MDLabel(
-                    text=entity.get('type', 'Entity').title(),
-                    font_style="Caption",
-                    theme_text_color="Secondary",
-                    size_hint_y=None,
-                    height=dp(20)
-                )
+                info_layout = MDBoxLayout(orientation="vertical")
+                name_label = MDLabel(text=entity['name'])
+                type_label = MDLabel(text=entity.get('type', 'Entity').title())
                 info_layout.add_widget(name_label)
                 info_layout.add_widget(type_label)
                 
-                # Score with visual indicator
-                score_layout = MDBoxLayout(
-                    orientation="vertical",
-                    spacing=dp(5),
-                    size_hint_x=0.3
-                )
-                score_label = MDLabel(
-                    text=f"{score:.1f}",
-                    font_style="Body1",
-                    theme_text_color="Primary",
-                    halign="right",
-                    size_hint_y=None,
-                    height=dp(25)
-                )
+                score_label = MDLabel(text=f"{score:.1f}")
                 
-                # Progress bar
-                progress_bg = MDBoxLayout(
-                    size_hint_y=None,
-                    height=dp(6),
-                    md_bg_color=[0.9, 0.9, 0.9, 1],
-                    radius=[dp(3), dp(3), dp(3), dp(3)]
-                )
-                progress_fill = MDBoxLayout(
-                    size_hint_x=min(score/100, 1.0),
-                    size_hint_y=1,
-                    md_bg_color=[0.2, 0.6, 0.8, 1],
-                    radius=[dp(3), dp(3), dp(3), dp(3)]
-                )
-                progress_bg.add_widget(progress_fill)
-                
-                score_layout.add_widget(score_label)
-                score_layout.add_widget(progress_bg)
-                
-                influencer_item.add_widget(rank_container)
+                influencer_item.add_widget(rank_label)
                 influencer_item.add_widget(info_layout)
-                influencer_item.add_widget(score_layout)
-                
-                # Add some spacing between items
-                item_container = MDBoxLayout(
-                    orientation="vertical",
-                    size_hint_y=None,
-                    height=dp(70),
-                    padding=dp(5)
-                )
-                item_container.add_widget(influencer_item)
-                influencers_container.add_widget(item_container)
+                influencer_item.add_widget(score_label)
+                influencers_layout.add_widget(influencer_item)
             
-            self.results_container.add_widget(influencers_container)
+            self.results_container.add_widget(influencers_layout)
         
-        # Key Findings - FLAT STYLING
         if analysis.get('key_findings'):
-            findings_container = MDBoxLayout(
-                orientation="vertical",
-                padding=dp(20),
-                spacing=dp(15),
-                size_hint_y=None,
-                height=dp(140),
-                md_bg_color=[0.98, 0.98, 0.98, 1],
-                radius=[dp(15), dp(15), dp(15), dp(15)]
-            )
+            findings_layout = MDBoxLayout(orientation="vertical")
             
-            findings_title = MDLabel(
-                text="Key Insights",
-                font_style="H6",
-                theme_text_color="Primary"
-            )
-            findings_container.add_widget(findings_title)
+            findings_title = MDLabel(text="Key Insights")
+            findings_layout.add_widget(findings_title)
             
-            for finding in analysis['key_findings'][:2]:  # Show top 2 findings
-                finding_item = MDBoxLayout(
-                    orientation="horizontal", 
-                    spacing=dp(15),
-                    padding=dp(10),
-                    adaptive_height=True
-                )
-                icon_widget = MDIconButton(
-                    icon="check-circle",
-                    theme_text_color="Custom", 
-                    text_color=[0.2, 0.7, 0.3, 1],
-                    disabled=True,
-                    size_hint_x=None,
-                    width=dp(40)
-                )
-                finding_label = MDLabel(
-                    text=finding,
-                    font_style="Body2",
-                    theme_text_color="Secondary",
-                    size_hint_y=None,
-                    height=dp(40)
-                )
-                finding_item.add_widget(icon_widget)
+            for finding in analysis['key_findings'][:2]:
+                finding_item = MDBoxLayout(orientation="horizontal")
+                finding_label = MDLabel(text=finding)
                 finding_item.add_widget(finding_label)
-                findings_container.add_widget(finding_item)
+                findings_layout.add_widget(finding_item)
             
-            self.results_container.add_widget(findings_container)
-        
-        # Add a final spacer to ensure everything is visible
-        self.results_container.add_widget(MDBoxLayout(size_hint_y=None, height=dp(20)))
-
+            self.results_container.add_widget(findings_layout)
+    
     def set_analysis_type(self, button, analysis_type):
-        """Set the active analysis type"""
-        # Reset all buttons
         for btn in self.analysis_buttons:
-            btn.md_bg_color = [1, 1, 1, 0]  # Transparent background
-            btn.text_color = [0.5, 0.5, 0.5, 1]
-            btn.line_color = [0.8, 0.8, 0.8, 1]
+            btn.md_bg_color = [1, 1, 1, 0]
         
-        # Set active button
         button.md_bg_color = [0.2, 0.6, 0.8, 1]
-        button.text_color = [1, 1, 1, 1]
-        button.line_color = [0.2, 0.6, 0.8, 1]
         self.active_analysis_type = analysis_type
         self.top_bar.title = f"{analysis_type} Analysis"
     
     def set_news_category(self, button, category):
-        """Set the active news category"""
-        # Reset all category buttons
         for btn in self.category_buttons:
-            btn.text_color = [0.5, 0.5, 0.5, 1]
-            btn.line_color = [0.8, 0.8, 0.8, 1]
+            btn.md_bg_color = [1, 1, 1, 0]
         
-        # Set active category button
-        button.text_color = [0.2, 0.6, 0.8, 1]
-        button.line_color = [0.2, 0.6, 0.8, 1]
+        button.md_bg_color = [0.2, 0.6, 0.8, 1]
         self.active_news_category = category.lower() if category != "All" else None
     
     def update_progress(self, value, status):
-        """Update progress with animation"""
         self.progress_value = value
         self.status_text = status
         self.status_label.text = status
     
     def load_sample_data(self, instance=None):
-        """Load sample data with enhanced UX"""
         self.url_input.text = "technology sector influence"
         self.analyze_article(None)
     
     def _create_entities_from_query(self, query):
-        """Create basic entities from search query when no entities are found"""
         entities = []
-        # Simple entity extraction from query words
         important_words = [word for word in query.split() if len(word) > 3]
-        for word in important_words[:5]:  # Limit to 5 entities
+        for word in important_words[:5]:
             entities.append({
                 'name': word.title(),
-                'type': 'Organization',  # Default type
+                'type': 'Organization',
                 'id': f"query_{word.lower()}",
                 'description': f"Entity mentioned in search: {query}"
             })
         return entities
     
     def _create_sample_relationships(self, entities):
-        """Create sample relationships when no real ones are found - FIXED VERSION"""
         relationships = []
         
         if len(entities) < 2:
             return relationships
         
-        # Create a small network with the most relevant entities
         for i in range(min(5, len(entities))):
             for j in range(i + 1, min(i + 3, len(entities))):
                 if i == j:
                     continue
                     
-                # Ensure both entities have IDs, generate if missing
                 entity1 = entities[i]
                 entity2 = entities[j]
                 
-                # Get or generate IDs for both entities
                 entity1_id = entity1.get('id')
                 if not entity1_id:
                     entity1_id = f"entity_{i}_{hash(entity1.get('name', str(i)))}"
@@ -1468,167 +773,100 @@ class AnalysisScreen(MDScreen):
                     entity2_id = f"entity_{j}_{hash(entity2.get('name', str(j)))}"
                     entity2['id'] = entity2_id
                 
-                # Determine relationship type based on entity types
                 type1 = entity1.get('type', 'organization')
                 type2 = entity2.get('type', 'organization')
                 
-                # Create appropriate relationship based on entity types
                 if type1 == 'person' and type2 == 'corporation':
                     rel_type = 'board_member'
-                    strength = 0.8
-                    description = f"{entity1['name']} serves on board of {entity2['name']}"
                 elif type1 == 'corporation' and type2 == 'corporation':
                     rel_type = 'partnership'
-                    strength = 0.6
-                    description = f"{entity1['name']} partners with {entity2['name']}"
                 elif type1 == 'government' and type2 == 'corporation':
                     rel_type = 'regulation'
-                    strength = 0.7
-                    description = f"{entity1['name']} regulates {entity2['name']}"
                 elif type1 == 'person' and type2 == 'person':
                     rel_type = 'colleague'
-                    strength = 0.5
-                    description = f"{entity1['name']} works with {entity2['name']}"
                 else:
                     rel_type = 'connected_to'
-                    strength = 0.5
-                    description = f"{entity1['name']} connected to {entity2['name']}"
                     
                 relationships.append({
                     'source': str(entity1_id),
                     'target': str(entity2_id),
                     'type': rel_type,
                     'relationship': rel_type,
-                    'description': description,
-                    'strength': strength
+                    'description': f"{entity1['name']} connected to {entity2['name']}",
+                    'strength': 0.5
                 })
         
         return relationships
     
     def _analysis_error(self, error_msg):
-        """Handle analysis errors"""
         self.is_analyzing = False
         self.analyze_btn.disabled = False
         self.analyze_btn.text = "Start Analysis"
         
-        # Remove progress card on error too
-        def remove_progress_card(dt):
-            if self.progress_card.parent:
-                self.progress_card.parent.remove_widget(self.progress_card)
+        def remove_progress(dt):
+            if self.progress_layout.parent:
+                self.progress_layout.parent.remove_widget(self.progress_layout)
             self.progress_value = 0
             self.status_text = "Ready to analyze power structures"
         
-        Clock.schedule_once(remove_progress_card, 0.5)
+        Clock.schedule_once(remove_progress, 0.5)
         
         self.results_container.clear_widgets()
-        error_item = TwoLineListItem(
-            text="Analysis Failed",
-            secondary_text=error_msg
-        )
+        error_item = TwoLineListItem(text="Analysis Failed", secondary_text=error_msg)
         self.results_container.add_widget(error_item)
-        
-        self.show_message("Analysis failed - please try again")
     
     def show_message(self, message):
-        """Show a message to the user"""
-        # Simple message display
         print(f"Message: {message}")
     
     def go_back(self):
-        """Return to welcome screen"""
         self.manager.current = 'welcome'
     
     def show_help(self):
-        """Show help dialog"""
         help_dialog = MDDialog(
             title="How to Use Krystal",
-            text="1. Enter a news URL or search terms\n2. Select analysis type\n3. Choose news category (optional)\n4. View power structure mapping\n5. Explore connections and influence scores\n\nKrystal helps you uncover hidden relationships between powerful entities in news media.",
+            text="1. Enter a news URL or search terms\n2. Select analysis type\n3. Choose news category (optional)\n4. View power structure mapping\n5. Explore connections and influence scores",
             buttons=[
-                MDFlatButton(
-                    text="Got it",
-                    theme_text_color="Custom",
-                    text_color=[0.2, 0.6, 0.8, 1],
-                    on_release=lambda x: help_dialog.dismiss()
-                ),
+                MDFlatButton(text="Got it", on_release=lambda x: help_dialog.dismiss()),
             ],
         )
         help_dialog.open()
-    
-    def show_settings(self):
-        """Show settings dialog"""
-        # Check API status
-        api_status = "🔴 Not configured" 
-        if self.news_client.is_api_available():
-            api_status = "🟢 Connected"
-        
-        settings_dialog = MDDialog(
-            title="Settings & API Status",
-            text=f"News API: {api_status}\n\nTo use real news data:\n1. Get API key from newsapi.org\n2. Set NEWS_API_KEY environment variable\n3. Restart the application",
-            buttons=[
-                MDFlatButton(
-                    text="Close",
-                    theme_text_color="Custom",
-                    text_color=[0.2, 0.6, 0.8, 1],
-                    on_release=lambda x: settings_dialog.dismiss()
-                ),
-            ],
-        )
-        settings_dialog.open()
 
 
 class KrystalApp(MDApp):
-    """Modern KivyMD application with enhanced UX"""
-    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
-        
-        # Improve graphics performance
-        from kivy.config import Config
-        Config.set('graphics', 'multisamples', '0')
     
     def build(self):
         self.title = "Krystal - Power Structure Mapper"
+        Window.clearcolor = (1, 1, 1, 1)
         
-        # Set theme first - this affects how colors are interpreted
-        self.theme_cls.primary_palette = "Blue"
-        self.theme_cls.theme_style = "Light"  # Light theme may have different shadow behavior
-        
-        # Then set window background color
-        Window.clearcolor = (0.95, 0.95, 0.98, 1)
-        
-        # Create screen manager
         sm = MDScreenManager()
-   
-        # Add screens
+        
         welcome_screen = WelcomeScreen()
         analysis_screen = AnalysisScreen()
         
         sm.add_widget(welcome_screen)
         sm.add_widget(analysis_screen)
-
+        
         return sm
     
     def on_start(self):
-        """Called when the app starts"""
-        print("🚀 Krystal app started with News API integration!")
-        
-        # Check API status on startup
+        print("Krystal app started!")
         from krystal.data_sources import NewsClient
         news_client = NewsClient()
         if news_client.is_api_available():
-            print("✅ News API is available and ready!")
+            print("News API is available!")
         else:
-            print("ℹ️  Using mock news data. Set NEWS_API_KEY for real news.")
+            print("Using mock news data.")
 
 
 def main():
-    """Main entry point"""
     try:
         KrystalApp().run()
     except Exception as e:
-        print(f"❌ App error: {e}")
+        print(f"App error: {e}")
         import traceback
         traceback.print_exc()
 
