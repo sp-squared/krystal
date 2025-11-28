@@ -721,8 +721,8 @@ class AnalysisScreen(MDScreen):
     
     def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data"):
         self.results_container.clear_widgets()
-        self.results_container.spacing = "16dp"
-        self.results_container.padding = "8dp"
+        self.results_container.spacing = "24dp"  # Increased spacing between sections
+        self.results_container.padding = "16dp"
         
         source_name = "Unknown"
         try:
@@ -734,12 +734,13 @@ class AnalysisScreen(MDScreen):
         except:
             source_name = "Unknown"
         
-        # Header Section
+        # Header Section with better separation
         header_layout = MDBoxLayout(
             orientation="vertical",
-            spacing="8dp",
+            spacing="12dp",
             size_hint_y=None,
-            height="120dp"
+            height="140dp",
+            padding="8dp"
         )
         
         title_label = MDLabel(
@@ -752,17 +753,20 @@ class AnalysisScreen(MDScreen):
         
         source_layout = MDBoxLayout(
             orientation="horizontal",
-            spacing="8dp",
+            spacing="12dp",
             size_hint_y=None,
             height="40dp"
         )
         source_label = MDLabel(
             text=f"Source: {source_name}",
-            size_hint_x=0.7
+            size_hint_x=0.7,
+            font_style="Subtitle1"
         )
         api_label = MDLabel(
             text=api_status,
-            size_hint_x=0.3
+            size_hint_x=0.3,
+            font_style="Caption",
+            halign="right"
         )
         
         source_layout.add_widget(source_label)
@@ -772,13 +776,26 @@ class AnalysisScreen(MDScreen):
         
         self.results_container.add_widget(header_layout)
         
+        # Add separator between header and content
+        separator1 = MDBoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height="1dp"
+        )
+        with separator1.canvas:
+            from kivy.graphics import Color, Rectangle
+            Color(0.8, 0.8, 0.8, 1)
+            Rectangle(pos=separator1.pos, size=separator1.size)
+        self.results_container.add_widget(separator1)
+        
         # Network Overview Section
         if analysis.get('summary', {}).get('entity_count', 0) > 0:
             overview_layout = MDBoxLayout(
                 orientation="vertical",
-                spacing="8dp",
+                spacing="12dp",
                 size_hint_y=None,
-                height="120dp"
+                height="140dp",
+                padding="12dp"
             )
             
             overview_title = MDLabel(
@@ -791,9 +808,9 @@ class AnalysisScreen(MDScreen):
             
             stats_layout = MDBoxLayout(
                 orientation="horizontal",
-                spacing="8dp",
+                spacing="16dp",
                 size_hint_y=None,
-                height="60dp"
+                height="80dp"
             )
             
             summary = analysis.get('summary', {})
@@ -807,7 +824,8 @@ class AnalysisScreen(MDScreen):
             for label, value in stats_data:
                 stat_item = MDBoxLayout(
                     orientation="vertical",
-                    spacing="4dp"
+                    spacing="4dp",
+                    size_hint_x=0.25
                 )
                 value_label = MDLabel(
                     text=value,
@@ -825,15 +843,27 @@ class AnalysisScreen(MDScreen):
             
             overview_layout.add_widget(stats_layout)
             self.results_container.add_widget(overview_layout)
+            
+            # Add separator
+            separator2 = MDBoxLayout(
+                orientation="horizontal",
+                size_hint_y=None,
+                height="1dp"
+            )
+            with separator2.canvas:
+                Color(0.8, 0.8, 0.8, 1)
+                Rectangle(pos=separator2.pos, size=separator2.size)
+            self.results_container.add_widget(separator2)
         
         # Entity Distribution Section
         entities = analysis.get('influence_rankings', [])
         if entities:
             distribution_layout = MDBoxLayout(
                 orientation="vertical",
-                spacing="8dp",
+                spacing="12dp",
                 size_hint_y=None,
-                height="120dp"
+                height="140dp",
+                padding="12dp"
             )
             
             distribution_title = MDLabel(
@@ -846,9 +876,9 @@ class AnalysisScreen(MDScreen):
             
             type_layout = MDBoxLayout(
                 orientation="horizontal",
-                spacing="8dp",
+                spacing="16dp",
                 size_hint_y=None,
-                height="60dp"
+                height="80dp"
             )
             
             type_counts = {}
@@ -859,7 +889,8 @@ class AnalysisScreen(MDScreen):
             for entity_type, count in type_counts.items():
                 type_item = MDBoxLayout(
                     orientation="vertical",
-                    spacing="4dp"
+                    spacing="4dp",
+                    size_hint_x=0.25
                 )
                 count_label = MDLabel(
                     text=str(count),
@@ -877,14 +908,26 @@ class AnalysisScreen(MDScreen):
             
             distribution_layout.add_widget(type_layout)
             self.results_container.add_widget(distribution_layout)
+            
+            # Add separator
+            separator3 = MDBoxLayout(
+                orientation="horizontal",
+                size_hint_y=None,
+                height="1dp"
+            )
+            with separator3.canvas:
+                Color(0.8, 0.8, 0.8, 1)
+                Rectangle(pos=separator3.pos, size=separator3.size)
+            self.results_container.add_widget(separator3)
         
         # Most Influential Entities Section
         if analysis['influence_rankings']:
             influencers_layout = MDBoxLayout(
                 orientation="vertical",
-                spacing="8dp",
+                spacing="12dp",
                 size_hint_y=None,
-                height="240dp"
+                height="280dp",
+                padding="12dp"
             )
             
             influencers_title = MDLabel(
@@ -900,19 +943,21 @@ class AnalysisScreen(MDScreen):
                 
                 influencer_item = MDBoxLayout(
                     orientation="horizontal",
-                    spacing="8dp",
+                    spacing="12dp",
                     size_hint_y=None,
-                    height="48dp"
+                    height="56dp",
+                    padding="4dp"
                 )
                 
                 rank_label = MDLabel(
                     text=str(i+1),
-                    size_hint_x=0.1
+                    size_hint_x=0.1,
+                    font_style="H6"
                 )
                 
                 info_layout = MDBoxLayout(
                     orientation="vertical",
-                    spacing="2dp",
+                    spacing="4dp",
                     size_hint_x=0.7
                 )
                 name_label = MDLabel(
@@ -926,25 +971,60 @@ class AnalysisScreen(MDScreen):
                 info_layout.add_widget(name_label)
                 info_layout.add_widget(type_label)
                 
+                score_layout = MDBoxLayout(
+                    orientation="vertical",
+                    size_hint_x=0.2
+                )
                 score_label = MDLabel(
                     text=f"{score:.1f}",
-                    size_hint_x=0.2,
-                    font_style="H6"
+                    font_style="H6",
+                    halign="right"
                 )
+                score_subtitle = MDLabel(
+                    text="Score",
+                    font_style="Caption",
+                    halign="right"
+                )
+                score_layout.add_widget(score_label)
+                score_layout.add_widget(score_subtitle)
                 
                 influencer_item.add_widget(rank_label)
                 influencer_item.add_widget(info_layout)
-                influencer_item.add_widget(score_label)
+                influencer_item.add_widget(score_layout)
                 influencers_layout.add_widget(influencer_item)
+                
+                # Add subtle separator between influencer items (except last one)
+                if i < min(3, len(analysis['influence_rankings'][:4]) - 1):
+                    item_separator = MDBoxLayout(
+                        orientation="horizontal",
+                        size_hint_y=None,
+                        height="1dp"
+                    )
+                    with item_separator.canvas:
+                        Color(0.9, 0.9, 0.9, 1)
+                        Rectangle(pos=item_separator.pos, size=item_separator.size)
+                    influencers_layout.add_widget(item_separator)
             
             self.results_container.add_widget(influencers_layout)
+            
+            # Add separator
+            separator4 = MDBoxLayout(
+                orientation="horizontal",
+                size_hint_y=None,
+                height="1dp"
+            )
+            with separator4.canvas:
+                Color(0.8, 0.8, 0.8, 1)
+                Rectangle(pos=separator4.pos, size=separator4.size)
+            self.results_container.add_widget(separator4)
         
         # Key Insights Section
         if analysis.get('key_findings'):
             findings_layout = MDBoxLayout(
                 orientation="vertical",
-                spacing="8dp",
-                size_hint_y=None
+                spacing="12dp",
+                size_hint_y=None,
+                padding="12dp"
             )
             
             findings_title = MDLabel(
@@ -960,17 +1040,27 @@ class AnalysisScreen(MDScreen):
                     orientation="horizontal",
                     spacing="8dp",
                     size_hint_y=None,
-                    height="40dp"
+                    height="48dp"
+                )
+                # Add bullet point
+                bullet = MDLabel(
+                    text="•",
+                    size_hint_x=0.1,
+                    font_style="H6"
                 )
                 finding_label = MDLabel(
                     text=finding,
                     font_style="Body1"
                 )
+                finding_item.add_widget(bullet)
                 finding_item.add_widget(finding_label)
                 findings_layout.add_widget(finding_item)
             
+            # Calculate dynamic height for findings section
+            findings_layout.height = 30 + (len(analysis['key_findings'][:2]) * 48) + 12
+            
             self.results_container.add_widget(findings_layout)
-    
+
     def set_analysis_type(self, button, analysis_type):
         for btn in self.analysis_buttons:
             btn.md_bg_color = [1, 1, 1, 0]
