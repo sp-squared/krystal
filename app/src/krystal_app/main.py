@@ -906,10 +906,10 @@ class AnalysisScreen(MDScreen):
         # Header section with source info
         header_card = MDCard(
             orientation="vertical",
-            padding=dp(20),
-            spacing=dp(10),
+            padding=dp(25),
+            spacing=dp(15),
             size_hint_y=None,
-            height=dp(120),
+            height=dp(140),
             elevation=2,
             radius=[dp(15), dp(15), dp(15), dp(15)],
             md_bg_color=[0.95, 0.97, 1.0, 1]
@@ -922,7 +922,7 @@ class AnalysisScreen(MDScreen):
             theme_text_color="Primary",
             halign="center",
             size_hint_y=None,
-            height=dp(40)
+            height=dp(50)
         )
         
         # Source and API status
@@ -947,14 +947,16 @@ class AnalysisScreen(MDScreen):
         header_card.add_widget(title_label)
         header_card.add_widget(source_layout)
         
+        self.results_layout.add_widget(header_card)
+        
         # URL context if applicable
         if original_url and extracted_topic:
             url_card = MDCard(
                 orientation="horizontal",
-                padding=dp(15),
-                spacing=dp(10),
+                padding=dp(20),
+                spacing=dp(15),
                 size_hint_y=None,
-                height=dp(80),
+                height=dp(90),
                 elevation=1,
                 radius=[dp(10), dp(10), dp(10), dp(10)]
             )
@@ -965,7 +967,7 @@ class AnalysisScreen(MDScreen):
                 disabled=True
             )
             
-            url_content = MDBoxLayout(orientation="vertical", spacing=dp(5))
+            url_content = MDBoxLayout(orientation="vertical", spacing=dp(8))
             url_title = MDLabel(
                 text="URL Analysis",
                 font_style="Body2",
@@ -983,15 +985,14 @@ class AnalysisScreen(MDScreen):
             url_card.add_widget(url_content)
             self.results_layout.add_widget(url_card)
         
-        self.results_layout.add_widget(header_card)
-        
         # API help if using mock data
         if "Mock" in api_status:
             help_card = MDCard(
                 orientation="horizontal",
-                padding=dp(15),
+                padding=dp(20),
+                spacing=dp(15),
                 size_hint_y=None,
-                height=dp(60),
+                height=dp(70),
                 elevation=1,
                 radius=[dp(10), dp(10), dp(10), dp(10)],
                 md_bg_color=[1.0, 0.95, 0.9, 1]
@@ -1018,10 +1019,10 @@ class AnalysisScreen(MDScreen):
         if analysis.get('summary', {}).get('entity_count', 0) > 0:
             overview_card = MDCard(
                 orientation="vertical",
-                padding=dp(20),
-                spacing=dp(15),
+                padding=dp(25),
+                spacing=dp(20),
                 size_hint_y=None,
-                height=dp(180),
+                height=dp(200),
                 elevation=2,
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
@@ -1029,12 +1030,14 @@ class AnalysisScreen(MDScreen):
             overview_title = MDLabel(
                 text="Network Overview",
                 font_style="H6",
-                theme_text_color="Primary"
+                theme_text_color="Primary",
+                size_hint_y=None,
+                height=dp(30)
             )
             overview_card.add_widget(overview_title)
             
             # Stats in a grid
-            stats_grid = MDGridLayout(cols=2, spacing=dp(10), adaptive_height=True)
+            stats_grid = MDGridLayout(cols=2, spacing=dp(15), padding=dp(10), adaptive_height=True)
             
             summary = analysis.get('summary', {})
             stats_data = [
@@ -1045,18 +1048,22 @@ class AnalysisScreen(MDScreen):
             ]
             
             for label, value in stats_data:
-                stat_item = MDBoxLayout(orientation="vertical", spacing=dp(5))
+                stat_item = MDBoxLayout(orientation="vertical", spacing=dp(8))
                 value_label = MDLabel(
                     text=value,
                     font_style="H5",
                     theme_text_color="Primary",
-                    halign="center"
+                    halign="center",
+                    size_hint_y=None,
+                    height=dp(30)
                 )
                 label_label = MDLabel(
                     text=label,
                     font_style="Caption",
                     theme_text_color="Secondary",
-                    halign="center"
+                    halign="center",
+                    size_hint_y=None,
+                    height=dp(20)
                 )
                 stat_item.add_widget(value_label)
                 stat_item.add_widget(label_label)
@@ -1076,10 +1083,10 @@ class AnalysisScreen(MDScreen):
             
             distribution_card = MDCard(
                 orientation="vertical",
-                padding=dp(20),
+                padding=dp(25),
                 spacing=dp(15),
                 size_hint_y=None,
-                height=dp(140),
+                height=dp(160),
                 elevation=1,
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
@@ -1087,12 +1094,14 @@ class AnalysisScreen(MDScreen):
             distribution_title = MDLabel(
                 text="Entity Distribution",
                 font_style="H6",
-                theme_text_color="Primary"
+                theme_text_color="Primary",
+                size_hint_y=None,
+                height=dp(30)
             )
             distribution_card.add_widget(distribution_title)
             
             # Entity types in a row
-            type_layout = MDBoxLayout(orientation="horizontal", spacing=dp(10), adaptive_height=True)
+            type_layout = MDBoxLayout(orientation="horizontal", spacing=dp(15), adaptive_height=True)
             
             type_icons = {
                 'person': "account",
@@ -1104,30 +1113,36 @@ class AnalysisScreen(MDScreen):
             for entity_type, count in type_counts.items():
                 type_item = MDBoxLayout(
                     orientation="vertical",
-                    spacing=dp(5),
+                    spacing=dp(8),
                     size_hint_x=None,
-                    width=dp(80)
+                    width=dp(90)
                 )
                 
                 icon_widget = MDIconButton(
                     icon=type_icons.get(entity_type, "help-circle"),
                     theme_text_color="Primary",
                     font_size="24sp",
-                    disabled=True
+                    disabled=True,
+                    size_hint_y=None,
+                    height=dp(40)
                 )
                 
                 count_label = MDLabel(
                     text=str(count),
                     font_style="Body1",
                     theme_text_color="Primary",
-                    halign="center"
+                    halign="center",
+                    size_hint_y=None,
+                    height=dp(25)
                 )
                 
                 type_label = MDLabel(
                     text=entity_type.title(),
                     font_style="Caption",
                     theme_text_color="Secondary",
-                    halign="center"
+                    halign="center",
+                    size_hint_y=None,
+                    height=dp(20)
                 )
                 
                 type_item.add_widget(icon_widget)
@@ -1142,10 +1157,10 @@ class AnalysisScreen(MDScreen):
         if analysis['influence_rankings']:
             influencers_card = MDCard(
                 orientation="vertical",
-                padding=dp(20),
-                spacing=dp(15),
+                padding=dp(25),
+                spacing=dp(20),
                 size_hint_y=None,
-                height=dp(280),
+                height=dp(320),
                 elevation=2,
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
@@ -1153,7 +1168,9 @@ class AnalysisScreen(MDScreen):
             influencers_title = MDLabel(
                 text="Most Influential Entities",
                 font_style="H6",
-                theme_text_color="Primary"
+                theme_text_color="Primary",
+                size_hint_y=None,
+                height=dp(30)
             )
             influencers_card.add_widget(influencers_title)
             
@@ -1163,16 +1180,18 @@ class AnalysisScreen(MDScreen):
                 influencer_item = MDBoxLayout(
                     orientation="horizontal",
                     adaptive_height=True,
-                    spacing=dp(15)
+                    spacing=dp(20),
+                    padding=dp(10)
                 )
                 
                 # Rank badge
                 rank_badge = MDCard(
                     size_hint=(None, None),
-                    size=(dp(40), dp(40)),
+                    size=(dp(45), dp(45)),
                     elevation=1,
-                    radius=[dp(20), dp(20), dp(20), dp(20)],
-                    md_bg_color=[0.2, 0.6, 0.8, 1]
+                    radius=[dp(22), dp(22), dp(22), dp(22)],
+                    md_bg_color=[0.2, 0.6, 0.8, 1],
+                    padding=dp(10)
                 )
                 rank_label = MDLabel(
                     text=str(i+1),
@@ -1185,18 +1204,20 @@ class AnalysisScreen(MDScreen):
                 rank_badge.add_widget(rank_label)
                 
                 # Entity info
-                info_layout = MDBoxLayout(orientation="vertical", spacing=dp(2))
+                info_layout = MDBoxLayout(orientation="vertical", spacing=dp(5), size_hint_x=0.5)
                 name_label = MDLabel(
                     text=entity['name'],
                     font_style="Body1",
                     theme_text_color="Primary",
-                    size_hint_y=0.6
+                    size_hint_y=None,
+                    height=dp(25)
                 )
                 type_label = MDLabel(
                     text=entity.get('type', 'Entity').title(),
                     font_style="Caption",
                     theme_text_color="Secondary",
-                    size_hint_y=0.4
+                    size_hint_y=None,
+                    height=dp(20)
                 )
                 info_layout.add_widget(name_label)
                 info_layout.add_widget(type_label)
@@ -1204,28 +1225,30 @@ class AnalysisScreen(MDScreen):
                 # Score with visual indicator
                 score_layout = MDBoxLayout(
                     orientation="vertical",
-                    spacing=dp(5),
+                    spacing=dp(8),
                     size_hint_x=0.3
                 )
                 score_label = MDLabel(
                     text=f"{score:.1f}",
                     font_style="Body1",
                     theme_text_color="Primary",
-                    halign="right"
+                    halign="right",
+                    size_hint_y=None,
+                    height=dp(25)
                 )
                 
                 # Progress bar
                 progress_bg = MDBoxLayout(
                     size_hint_y=None,
-                    height=dp(6),
+                    height=dp(8),
                     md_bg_color=[0.9, 0.9, 0.9, 1],
-                    radius=[dp(3), dp(3), dp(3), dp(3)]
+                    radius=[dp(4), dp(4), dp(4), dp(4)]
                 )
                 progress_fill = MDBoxLayout(
                     size_hint_x=min(score/100, 1.0),
                     size_hint_y=1,
                     md_bg_color=[0.2, 0.6, 0.8, 1],
-                    radius=[dp(3), dp(3), dp(3), dp(3)]
+                    radius=[dp(4), dp(4), dp(4), dp(4)]
                 )
                 progress_bg.add_widget(progress_fill)
                 
@@ -1240,7 +1263,7 @@ class AnalysisScreen(MDScreen):
                 item_container = MDBoxLayout(
                     orientation="vertical",
                     size_hint_y=None,
-                    height=dp(60),
+                    height=dp(70),
                     padding=dp(5)
                 )
                 item_container.add_widget(influencer_item)
@@ -1252,10 +1275,10 @@ class AnalysisScreen(MDScreen):
         if analysis.get('key_findings'):
             findings_card = MDCard(
                 orientation="vertical",
-                padding=dp(20),
+                padding=dp(25),
                 spacing=dp(15),
                 size_hint_y=None,
-                height=dp(150),
+                height=dp(180),
                 elevation=1,
                 radius=[dp(15), dp(15), dp(15), dp(15)]
             )
@@ -1263,22 +1286,33 @@ class AnalysisScreen(MDScreen):
             findings_title = MDLabel(
                 text="Key Insights",
                 font_style="H6",
-                theme_text_color="Primary"
+                theme_text_color="Primary",
+                size_hint_y=None,
+                height=dp(30)
             )
             findings_card.add_widget(findings_title)
             
             for finding in analysis['key_findings'][:2]:  # Show top 2 findings
-                finding_item = MDBoxLayout(orientation="horizontal", spacing=dp(10))
+                finding_item = MDBoxLayout(
+                    orientation="horizontal", 
+                    spacing=dp(15),
+                    padding=dp(10),
+                    adaptive_height=True
+                )
                 icon_widget = MDIconButton(
                     icon="check-circle",
                     theme_text_color="Custom", 
                     text_color=[0.2, 0.7, 0.3, 1],
-                    disabled=True
+                    disabled=True,
+                    size_hint_x=None,
+                    width=dp(40)
                 )
                 finding_label = MDLabel(
                     text=finding,
                     font_style="Body2",
-                    theme_text_color="Secondary"
+                    theme_text_color="Secondary",
+                    size_hint_y=None,
+                    height=dp(40)
                 )
                 finding_item.add_widget(icon_widget)
                 finding_item.add_widget(finding_label)
