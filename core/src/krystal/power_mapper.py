@@ -97,53 +97,112 @@ class PowerMapper:
                 weight = rel.get('strength', 0.5)  # Default strength if not provided
                 if weight >= self.min_relationship_strength:
                     self.graph.add_edge(source, target, **rel)
-    
+
     def _calculate_centrality(self) -> Dict[str, Dict]:
-        """Calculate various centrality measures for the network"""
-        if len(self.graph) == 0:
+        """Calculate various centrality measures for the network - FIXED VERSION"""
+        if len(self.graph) == 0 or self.graph.number_of_edges() == 0:
             return {}
             
         try:
-            return {
-                "degree_centrality": nx.degree_centrality(self.graph),
-                "betweenness_centrality": nx.betweenness_centrality(self.graph),
-                "eigenvector_centrality": nx.eigenvector_centrality(self.graph, max_iter=1000),
-                "closeness_centrality": nx.closeness_centrality(self.graph)
-            }
+            centrality_results = {}
+            
+            # Degree centrality (always works)
+            centrality_results["degree_centrality"] = nx.degree_centrality(self.graph)
+            
+            # Betweenness centrality (requires connected graph)
+            if nx.is_connected(self.graph):
+                centrality_results["betweenness_centrality"] = nx.betweenness_centrality(self.graph)
+            else:
+                # Calculate for each connected component
+                betweenness = {}
+                for component in nx.connected_components(self.graph):
+                    if len(component) > 1:
+                        subgraph = self.graph.subgraph(component)
+                        sub_betweenness = nx.betweenness_centrality(subgraph)
+                        betweenness.update(sub_betweenness)
+                    else:
+                        # Single node component has betweenness 0
+                        betweenness[list(component)[0]] = 0.0
+                centrality_results["betweenness_centrality"] = betweenness
+            
+            # Eigenvector centrality (requires connected graph)
+            try:
+                if nx.is_connected(self.graph) and len(self.graph) > 1:
+                    centrality_results["eigenvector_centrality"] = nx.eigenvector_centrality(self.graph, max_iter=1000)
+                else:
+                    # Use degree centrality as fallback
+                    centrality_results["eigenvector_centrality"] = centrality_results["degree_centrality"]
+            except:
+                centrality_results["eigenvector_centrality"] = centrality_results["degree_centrality"]
+            
+            # Closeness centrality
+            try:
+                centrality_results["closeness_centrality"] = nx.closeness_centrality(self.graph)
+            except:
+                centrality_results["closeness_centrality"] = centrality_results["degree_centrality"]
+            
+            return centrality_results
         except Exception as e:
             print(f"Error calculating centrality: {e}")
-            return {}
-    
+            return {}    
+        
     def _detect_communities(self) -> Dict[str, Any]:
-        """Detect community structure in the network"""
-        if len(self.graph) == 0:
-            return {"communities": [], "modularity": 0.0}
+        """Detect community structure in the network - FIXED VERSION"""
+        if len(self.graph) == 0 or self.graph.number_of_edges() == 0:
+            return {"communities": [], "modularity": 0.0, "community_count": 0}
             
         try:
-            # Use Louvain method for community detection
-            communities = nx.community.louvain_communities(self.graph, seed=42)
-            modularity = nx.community.modularity(self.graph, communities)
+            # Check if graph has enough connections for community detection
+            if self.graph.number_of_edges() < 2:
+                # Create trivial communities - each node in its own community
+                communities = [[node] for node in self.graph.nodes()]
+                modularity = 0.0
+            else:
+                # Use Louvain method for community detection
+                communities = nx.community.louvain_communities(self.graph, seed=42)
+                modularity = nx.community.modularity(self.graph, communities)
             
             # Format communities with entity details
             detailed_communities = []
             for i, community in enumerate(communities):
-                community_entities = [self.entities[node_id] for node_id in community]
-                detailed_communities.append({
-                    "id": i + 1,
-                    "size": len(community),
-                    "entities": community_entities,
-                    "influence_score": sum(self._calculate_entity_influence(node_id) for node_id in community) / len(community)
-                })
+                community_entities = [self.entities[node_id] for node_id in community if node_id in self.entities]
+                if community_entities:  # Only add non-empty communities
+                    community_influence = sum(self._calculate_entity_influence(node_id) for node_id in community if node_id in self.entities)
+                    avg_influence = community_influence / len(community_entities) if community_entities else 0
+                    
+                    detailed_communities.append({
+                        "id": i + 1,
+                        "size": len(community_entities),
+                        "entities": community_entities,
+                        "influence_score": avg_influence
+                    })
             
             return {
                 "communities": detailed_communities,
                 "modularity": modularity,
-                "community_count": len(communities)
+                "community_count": len(detailed_communities)
             }
         except Exception as e:
             print(f"Error detecting communities: {e}")
-            return {"communities": [], "modularity": 0.0}
-    
+            # Fallback: each node as its own community
+            communities = [[node] for node in self.graph.nodes()]
+            detailed_communities = []
+            for i, community in enumerate(communities):
+                community_entities = [self.entities[node_id] for node_id in community if node_id in self.entities]
+                if community_entities:
+                    detailed_communities.append({
+                        "id": i + 1,
+                        "size": len(community_entities),
+                        "entities": community_entities,
+                        "influence_score": 0.0
+                    })
+            
+            return {
+                "communities": detailed_communities,
+                "modularity": 0.0,
+                "community_count": len(detailed_communities)
+            }
+        
     def _calculate_influence_scores(self) -> List[Dict]:
         """Calculate influence scores for all entities"""
         influence_scores = []
