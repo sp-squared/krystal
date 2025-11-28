@@ -1378,7 +1378,7 @@ class AnalysisScreen(MDScreen):
                     padding=15,
                     size_hint_x=None,
                     width=100,
-                    elevation=0  # Reduced elevation
+                    elevation=0
                 )
                 
                 type_label = MDLabel(
@@ -1399,25 +1399,24 @@ class AnalysisScreen(MDScreen):
             
             content.add_widget(type_layout)
         
-        # FIX: Create dialog with reduced elevation and proper cleanup
+        # FIX: Create dialog with transparent background and no shadow
         self.viz_dialog = MDDialog(
             title="Network Visualization",
             type="custom",
             content_cls=content,
             size_hint=(0.9, 0.8),
-            elevation=0,  # Reduced elevation
-            overlay_color=(0, 0, 0, 0.3),  # Lighter overlay
-            buttons=[
-                MDFlatButton(
-                    text="Close",
-                    theme_text_color="Custom",
-                    text_color=[0.5, 0.5, 0.5, 1],
-                    on_release=self._close_viz_dialog
-                ),
-            ],
+            elevation=0,
+            md_bg_color=[1, 1, 1, 1],  # Solid white background
+            overlay_color=[0, 0, 0, 0.2],  # Very light overlay
+            background_color=[1, 1, 1, 1],  # Remove dialog background
         )
+        
+        # FIX: Remove any shadow from the dialog
+        self.viz_dialog.ids.container.shadow_color = [0, 0, 0, 0]
+        self.viz_dialog.ids.container.elevation = 0
+        
         self.viz_dialog.open()
-    
+
     def _close_viz_dialog(self, instance):
         """Properly close visualization dialog to prevent shadow artifacts"""
         if hasattr(self, 'viz_dialog') and self.viz_dialog:
@@ -1578,12 +1577,14 @@ class AnalysisScreen(MDScreen):
     
     def show_help(self):
         """Show help dialog"""
-        # FIX: Create dialog with reduced elevation
+        # FIX: Create dialog with transparent background
         help_dialog = MDDialog(
             title="How to Use Krystal",
             text="1. Enter a news URL or search terms\n2. Select analysis type\n3. Choose news category (optional)\n4. View power structure mapping\n5. Explore connections and influence scores\n\nKrystal helps you uncover hidden relationships between powerful entities in news media.",
-            elevation=0,  # Reduced elevation
-            overlay_color=(0, 0, 0, 0.3),  # Lighter overlay
+            elevation=0,
+            md_bg_color=[1, 1, 1, 1],
+            overlay_color=[0, 0, 0, 0.2],
+            background_color=[1, 1, 1, 1],
             buttons=[
                 MDFlatButton(
                     text="Got it",
@@ -1593,6 +1594,12 @@ class AnalysisScreen(MDScreen):
                 ),
             ],
         )
+        
+        # Remove shadow
+        if hasattr(help_dialog, 'ids') and 'container' in help_dialog.ids:
+            help_dialog.ids.container.shadow_color = [0, 0, 0, 0]
+            help_dialog.ids.container.elevation = 0
+            
         help_dialog.open()
     
     def show_settings(self):
@@ -1602,12 +1609,14 @@ class AnalysisScreen(MDScreen):
         if self.news_client.is_api_available():
             api_status = "🟢 Connected"
         
-        # FIX: Create dialog with reduced elevation
+        # FIX: Create dialog with transparent background
         settings_dialog = MDDialog(
             title="Settings & API Status",
             text=f"News API: {api_status}\n\nTo use real news data:\n1. Get API key from newsapi.org\n2. Set NEWS_API_KEY environment variable\n3. Restart the application",
-            elevation=0,  # Reduced elevation
-            overlay_color=(0, 0, 0, 0.3),  # Lighter overlay
+            elevation=0,
+            md_bg_color=[1, 1, 1, 1],
+            overlay_color=[0, 0, 0, 0.2],
+            background_color=[1, 1, 1, 1],
             buttons=[
                 MDFlatButton(
                     text="Close",
@@ -1617,6 +1626,12 @@ class AnalysisScreen(MDScreen):
                 ),
             ],
         )
+        
+        # Remove shadow
+        if hasattr(settings_dialog, 'ids') and 'container' in settings_dialog.ids:
+            settings_dialog.ids.container.shadow_color = [0, 0, 0, 0]
+            settings_dialog.ids.container.elevation = 0
+            
         settings_dialog.open()
 
     def on_leave(self, *args):
@@ -1629,7 +1644,7 @@ class AnalysisScreen(MDScreen):
         # Force cleanup
         import gc
         gc.collect()
-
+        
 class KrystalApp(MDApp):
     """Modern KivyMD application with enhanced UX"""
     
@@ -1640,13 +1655,14 @@ class KrystalApp(MDApp):
         
         # Improve graphics performance
         from kivy.config import Config
-        Config.set('graphics', 'multisamples', '0')  # Disable anti-aliasing for better performance
+        Config.set('graphics', 'multisamples', '0')
     
     def build(self):
         self.title = "Krystal - Power Structure Mapper"
-        Window.clearcolor = (0.95, 0.95, 0.98, 1)  # Light background
+        Window.clearcolor = (0.95, 0.95, 0.98, 1)
         
-        # FIX: Ensure window background is properly set and prevent shadow artifacts
+        # FIX: Set window background and prevent any overlay shadows
+        from kivy.core.window import Window
         Window.clearcolor = (0.95, 0.95, 0.98, 1)
         
         # Create screen manager
@@ -1673,7 +1689,6 @@ class KrystalApp(MDApp):
         else:
             print("ℹ️  Using mock news data. Set NEWS_API_KEY for real news.")
 
-
 def main():
     """Main entry point"""
     try:
@@ -1682,7 +1697,6 @@ def main():
         print(f"❌ App error: {e}")
         import traceback
         traceback.print_exc()
-
 
 if __name__ == '__main__':
     main()
