@@ -353,9 +353,9 @@ class NewsClient:
             try:
                 self.newsapi = NewsApiClient(api_key=self.api_key)
                 self.use_real_api = True
-                print("✅ NewsAPI client initialized successfully")
+                print("✅ News API client has initialized successfully.")
             except Exception as e:
-                print(f"❌ Failed to initialize NewsAPI: {e}")
+                print(f"❌ Failed to initialize News API: {e}")
                 self.use_real_api = False
         else:
             print("ℹ️  Using mock news data (no API key or newsapi not available)")
