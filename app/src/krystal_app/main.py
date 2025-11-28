@@ -1647,7 +1647,6 @@ class KrystalApp(MDApp):
         Window.clearcolor = (0.95, 0.95, 0.98, 1)  # Light background
         
         # FIX: Ensure window background is properly set and prevent shadow artifacts
-        from kivy.core.window import Window
         Window.clearcolor = (0.95, 0.95, 0.98, 1)
         
         # Create screen manager
