@@ -47,7 +47,7 @@ class LittleSisClient:
     
     def get_entity_connections(self, entity_id: int, entity_name: str, max_connections: int = 8) -> List[Dict]:
         """Get power structure connections for an entity - FIXED VERSION"""
-        print(f"🔗 Mapping power network for: {entity_name}")
+        print(f"[NETWORK] Mapping power network for: {entity_name}")
         
         # Ensure entity_id is properly handled (can be string or int)
         try:
@@ -65,7 +65,7 @@ class LittleSisClient:
         # Create realistic power structure connections
         connections = self._create_power_connections(entity_id, entity_name, max_connections)
         
-        print(f"✅ Mapped {len(connections)} power relationships for {entity_name}")
+        print(f"[SUCCESS] Mapped {len(connections)} power relationships for {entity_name}")
         return connections
     
     def _create_entity_from_name(self, name: str, entity_id: int) -> Dict:
@@ -372,7 +372,7 @@ class NewsClient:
         
         if self.use_real_api and self.newsapi:
             try:
-                print(f"🔍 Searching real news for: {query}")
+                print(f"[SEARCH] Searching real news for: {query}")
                 
                 response = self.newsapi.get_everything(
                     q=query,
@@ -384,7 +384,7 @@ class NewsClient:
                 
                 if response['status'] == 'ok':
                     articles = response['articles']
-                    print(f"✅ Found {len(articles)} real news articles")
+                    print(f"[SUCCESS] Found {len(articles)} real news articles")
                     
                     formatted_articles = []
                     for article in articles[:max_results]:
@@ -465,7 +465,7 @@ class NewsClient:
                 unique_entities.append(entity)
                 seen_names.add(entity['name'])
         
-        print(f"📊 Extracted {len(unique_entities)} entities from news content")
+        print(f"[ENTITIES] Extracted {len(unique_entities)} entities from news content")
         return unique_entities
     
     def _is_likely_person(self, name: str) -> bool:

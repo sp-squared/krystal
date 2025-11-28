@@ -29,7 +29,7 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDFlatButton, MDRoundFlatButton, MDIconButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.progressbar import MDProgressBar
-from kivymd.uix.list import MDList, OneLineListItem, TwoLineListItem
+from kivymd.uix.list import MDList, OneLineListItem, TwoLineListItem, IconLeftWidget, OneLineAvatarIconListItem
 from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.navigationdrawer import MDNavigationDrawer
 from kivymd.uix.screen import MDScreen
@@ -37,6 +37,7 @@ from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.selectioncontrol import MDCheckbox
 from kivymd.uix.slider import MDSlider
+from kivymd.uix.icon import MDIcon
 
 # Core functionality
 from krystal.power_mapper import PowerMapper, create_sample_network
@@ -740,12 +741,12 @@ class AnalysisScreen(MDScreen):
                 return
             
             # Show API status with URL context if applicable
-            api_status = "🔴 Mock Data" if not self.news_client.is_api_available() else "🟢 Real News API"
+            api_status = "[MOCK] Mock Data" if not self.news_client.is_api_available() else "[LIVE] Real News API"
             
             if is_url:
                 self.show_message(f"Using {api_status} | Topic: {extracted_topic}")
             else:
-                self.show_message(f"Using {api_status}")
+                self.show_message(f"Using {api_status}")            
             
             # Extract entities from articles (ONLY ONCE - no duplicates)
             entities = []
@@ -1143,7 +1144,7 @@ class AnalysisScreen(MDScreen):
                 finding_item = OneLineAvatarIconListItem(text=finding)
                 finding_item.add_widget(IconLeftWidget(icon="check"))
                 self.results_layout.add_widget(finding_item)
-                
+
     def show_network_visualization(self, instance=None):
         """Show interactive network visualization"""
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
