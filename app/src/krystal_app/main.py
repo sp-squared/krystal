@@ -324,7 +324,7 @@ class WelcomeScreen(MDScreen):
         )
         
         self.status_label = MDLabel(
-            text=self.status_text,
+            text="Ready to analyze power structures",
             font_style="Body1",
             theme_text_color="Secondary"
         )
@@ -1127,7 +1127,7 @@ class WelcomeScreen(MDScreen):
         
         # Add a final spacer to ensure everything is visible
         self.results_container.add_widget(MDBoxLayout(size_hint_y=None, height=dp(20)))
-        
+
     def show_network_visualization(self, instance=None):
         """Show interactive network visualization"""
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
