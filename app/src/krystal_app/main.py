@@ -512,6 +512,8 @@ class AnalysisScreen(MDScreen):
 
     def _analysis_complete(self, query, category=None):
         """Handle analysis completion with category - FIXED VERSION"""
+        # Add this at the start of _analysis_complete
+        print(f"DEBUG: Query='{query}', Category='{category}', AnalysisType='{self.active_analysis_type}'")
         try:
             # Get real news data with category
             articles = []
