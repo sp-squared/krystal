@@ -1,5 +1,7 @@
 # Krystal
 
+![screenshot](krystal\app\img)
+
 > Mobile interface for power structure analysis
 
 Krystal is a mobile application that overlays power structure mapping onto news content using the Google News API and LittleSis API. The app reveals connections between corporations, government officials, and other powerful entities mentioned in news stories.
