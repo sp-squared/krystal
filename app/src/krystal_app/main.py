@@ -22,7 +22,6 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDFlatButton, MDRoundFlatButton, MDIconButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.progressbar import MDProgressBar
-from kivymd.uix.chip import MDChip
 from kivymd.uix.list import MDList, OneLineListItem, OneLineIconListItem, TwoLineListItem
 from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.navigationdrawer import MDNavigationDrawer
@@ -31,7 +30,6 @@ from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.selectioncontrol import MDCheckbox
 from kivymd.uix.slider import MDSlider
-from kivymd.icon_definitions import md_icons
 
 # Core functionality
 from krystal.power_mapper import PowerMapper, create_sample_network
@@ -52,18 +50,17 @@ class WelcomeScreen(MDScreen):
             orientation="vertical",
             padding=dp(40),
             spacing=dp(30),
-            md_bg_color=[0.95, 0.95, 0.98, 1]  # Light blue-gray
+            md_bg_color=[0.95, 0.95, 0.98, 1]
         )
         
-        # Animated header section
+        # Header section
         header_layout = MDBoxLayout(
             orientation="vertical",
             spacing=dp(20),
-            size_hint_y=0.4,
-            adaptive_height=False
+            size_hint_y=0.4
         )
         
-        # Animated icon
+        # App icon
         self.icon_label = MDLabel(
             text="🔍",
             font_style="H2",
@@ -73,7 +70,7 @@ class WelcomeScreen(MDScreen):
             size_hint_y=0.6
         )
         
-        # App title with gradient text effect
+        # App title
         title_layout = MDBoxLayout(orientation="vertical", spacing=dp(5))
         title_label = MDLabel(
             text="KRYSTAL",
@@ -96,7 +93,7 @@ class WelcomeScreen(MDScreen):
         header_layout.add_widget(self.icon_label)
         header_layout.add_widget(title_layout)
         
-        # Features carousel
+        # Features section
         features_card = MDCard(
             orientation="vertical",
             padding=dp(20),
@@ -176,27 +173,10 @@ class WelcomeScreen(MDScreen):
         main_layout.add_widget(action_layout)
         
         self.add_widget(main_layout)
-        
-        # Start animations
-        Clock.schedule_once(self.animate_entrance, 0.5)
-    
-    def animate_entrance(self, dt):
-        """Animate the welcome screen entrance"""
-        anim = Animation(opacity=1, duration=0.8)
-        anim.start(self.icon_label)
-        
-        # Bounce animation for icon
-        anim_icon = Animation(font_size=dp(80), duration=0.5, t='out_back')
-        anim_icon.start(self.icon_label)
     
     def start_analysis(self, instance):
-        """Navigate to analysis screen with animation"""
-        # Button press animation
-        anim = Animation(md_bg_color=[0.1, 0.4, 0.6, 1], duration=0.1) + \
-               Animation(md_bg_color=[0.2, 0.6, 0.8, 1], duration=0.1)
-        anim.start(instance)
-        
-        Clock.schedule_once(lambda dt: setattr(self.manager, 'current', 'analysis'), 0.3)
+        """Navigate to analysis screen"""
+        self.manager.current = 'analysis'
     
     def show_sample(self, instance):
         """Show sample data preview"""
@@ -258,7 +238,7 @@ class AnalysisScreen(MDScreen):
             specific_text_color=[1, 1, 1, 1],
             left_action_items=[["arrow-left", lambda x: self.go_back()]],
             right_action_items=[
-                ["information-outline", lambda x: self.show_help()],
+                ["help", lambda x: self.show_help()],
                 ["cog", lambda x: self.show_settings()],
             ]
         )
@@ -290,28 +270,33 @@ class AnalysisScreen(MDScreen):
             icon_left="magnify"
         )
         
-        # Analysis type chips
-        chip_layout = MDBoxLayout(orientation="horizontal", spacing=dp(10), adaptive_height=True)
+        # Analysis type buttons (replacing chips)
+        analysis_layout = MDBoxLayout(orientation="horizontal", spacing=dp(10), adaptive_height=True)
         analysis_types = [
-            ("News Article", "newspaper"),
+            ("News", "newspaper"),
             ("Organization", "office-building"),
             ("Person", "account"),
-            ("Topic", "tag-multiple")
+            ("Topic", "tag")
         ]
         
-        self.active_chip = None
+        self.analysis_buttons = []
         for text, icon in analysis_types:
-            chip = MDChip(
+            btn = MDRoundFlatButton(
                 text=text,
                 icon=icon,
-                check=True,
-                color=[0.2, 0.6, 0.8, 1]
+                size_hint_x=None,
+                width=dp(120),
+                theme_text_color="Custom",
+                text_color=[0.2, 0.6, 0.8, 1],
+                line_color=[0.2, 0.6, 0.8, 1]
             )
-            chip.bind(on_press=lambda x, t=text: self.set_analysis_type(x, t))
-            chip_layout.add_widget(chip)
-            if text == "News Article":
-                self.active_chip = chip
-                chip.active = True
+            btn.bind(on_release=lambda x, t=text: self.set_analysis_type(x, t))
+            analysis_layout.add_widget(btn)
+            self.analysis_buttons.append(btn)
+        
+        # Set first button as active
+        if self.analysis_buttons:
+            self.set_analysis_type(self.analysis_buttons[0], "News")
         
         # Action buttons
         button_layout = MDBoxLayout(orientation="horizontal", spacing=dp(15), adaptive_height=True)
@@ -336,7 +321,7 @@ class AnalysisScreen(MDScreen):
         
         input_card.add_widget(input_title)
         input_card.add_widget(self.url_input)
-        input_card.add_widget(chip_layout)
+        input_card.add_widget(analysis_layout)
         input_card.add_widget(button_layout)
         content_layout.add_widget(input_card)
         
@@ -347,7 +332,7 @@ class AnalysisScreen(MDScreen):
             spacing=dp(15),
             elevation=2,
             radius=[dp(15), dp(15), dp(15), dp(15)],
-            opacity=0  # Hidden initially
+            opacity=0
         )
         
         progress_title = MDLabel(
@@ -388,19 +373,24 @@ class AnalysisScreen(MDScreen):
         main_layout.add_widget(content_layout)
         self.add_widget(main_layout)
     
-    def set_analysis_type(self, chip, analysis_type):
+    def set_analysis_type(self, button, analysis_type):
         """Set the active analysis type"""
-        if self.active_chip:
-            self.active_chip.active = False
-        chip.active = True
-        self.active_chip = chip
+        # Reset all buttons
+        for btn in self.analysis_buttons:
+            btn.md_bg_color = [1, 1, 1, 0]  # Transparent background
+            btn.text_color = [0.2, 0.6, 0.8, 1]
+        
+        # Set active button
+        button.md_bg_color = [0.2, 0.6, 0.8, 1]
+        button.text_color = [1, 1, 1, 1]
+        self.active_analysis_type = analysis_type
         self.top_bar.title = f"{analysis_type} Analysis"
     
     def analyze_article(self, instance):
         """Start analysis with enhanced UX"""
         query = self.url_input.text.strip()
         if not query:
-            self.show_snackbar("Please enter a URL or search terms")
+            self.show_message("Please enter a URL or search terms")
             return
         
         if self.is_analyzing:
@@ -410,9 +400,8 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.disabled = True
         self.analyze_btn.text = "Analyzing..."
         
-        # Show progress card with animation
-        anim = Animation(opacity=1, duration=0.3)
-        anim.start(self.progress_card)
+        # Show progress card
+        self.progress_card.opacity = 1
         
         # Clear previous results
         self.results_layout.clear_widgets()
@@ -486,9 +475,9 @@ class AnalysisScreen(MDScreen):
             self.analyze_btn.text = "Start Analysis"
             
             # Hide progress card after delay
-            Clock.schedule_once(lambda dt: Animation(opacity=0, duration=0.5).start(self.progress_card), 2)
+            Clock.schedule_once(lambda dt: setattr(self.progress_card, 'opacity', 0), 2)
             
-            self.show_snackbar("Analysis completed successfully!")
+            self.show_message("Analysis completed successfully!")
             
         except Exception as e:
             self._analysis_error(str(e))
@@ -506,11 +495,11 @@ class AnalysisScreen(MDScreen):
         )
         self.results_layout.add_widget(error_item)
         
-        self.show_snackbar("Analysis failed - please try again")
+        self.show_message("Analysis failed - please try again")
     
     def update_progress(self, value, status):
         """Update progress with animation"""
-        Animation(progress_value=value, duration=0.5).start(self)
+        self.progress_value = value
         self.status_text = status
         self.status_label.text = status
     
@@ -556,17 +545,11 @@ class AnalysisScreen(MDScreen):
             for finding in analysis['key_findings'][:3]:
                 finding_item = OneLineListItem(text=f"• {finding}")
                 self.results_layout.add_widget(finding_item)
-        
-        # Action buttons
-        actions_header = OneLineListItem(text="📤 Export & Share")
-        self.results_layout.add_widget(actions_header)
-        
-        # Would add export buttons here in a real implementation
     
-    def show_snackbar(self, message):
-        """Show a snackbar message"""
-        # In a real implementation, use MDApp.get_running_app().show_snackbar(message)
-        print(f"Snackbar: {message}")  # Placeholder
+    def show_message(self, message):
+        """Show a message to the user"""
+        # Simple message display - in production, use MDApp snackbar
+        print(f"Message: {message}")
     
     def go_back(self):
         """Return to welcome screen"""
@@ -592,28 +575,16 @@ class AnalysisScreen(MDScreen):
         """Show settings dialog"""
         settings_dialog = MDDialog(
             title="Settings",
-            type="custom",
-            content_cls=MDBoxLayout(
-                orientation="vertical",
-                spacing=dp(15),
-                adaptive_height=True
-            ),
+            text="Settings will be available in a future update.",
             buttons=[
                 MDFlatButton(
-                    text="Cancel",
+                    text="Close",
                     theme_text_color="Custom",
-                    text_color=[0.5, 0.5, 0.5, 1],
-                ),
-                MDRaisedButton(
-                    text="Save",
-                    md_bg_color=[0.2, 0.6, 0.8, 1],
+                    text_color=[0.2, 0.6, 0.8, 1],
+                    on_release=lambda x: settings_dialog.dismiss()
                 ),
             ],
         )
-        
-        # Add settings controls to content
-        # Would add API key inputs, theme settings, etc.
-        
         settings_dialog.open()
 
 
@@ -627,7 +598,7 @@ class KrystalApp(MDApp):
     
     def build(self):
         self.title = "Krystal - Power Structure Mapper"
-        Window.clearcolor = (0.95, 0.95, 0.98, 1)  # Light background
+        Window.clearcolor = (0.95, 0.95, 0.98, 1)
         
         # Create screen manager
         sm = MDScreenManager()
@@ -644,11 +615,6 @@ class KrystalApp(MDApp):
     def on_start(self):
         """Called when the app starts"""
         print("🚀 Krystal app started with enhanced UI!")
-    
-    def show_snackbar(self, message):
-        """Show snackbar notification"""
-        # This would use KivyMD's Snackbar in a real implementation
-        print(f"Notification: {message}")
 
 
 def main():
