@@ -20,7 +20,7 @@ def setup_news_api():
         return
     
     # Check for existing API key
-    api_key = os.getenv('e8f205e3a0534b8c957171e107d6cb46')
+    api_key = os.getenv('NEWS_API_KEY')
     if api_key:
         print(f"✅ NEWS_API_KEY found: {api_key[:8]}...{api_key[-4:]}")
         
