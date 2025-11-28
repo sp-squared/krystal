@@ -302,12 +302,15 @@ class WelcomeScreen(MDScreen):
     def start_analysis(self, instance):
         """Navigate to analysis screen"""
         self.manager.current = 'analysis'
-    
+
     def show_sample(self, instance):
         """Show sample data preview"""
+        # FIX: Create dialog with reduced elevation
         sample_dialog = MDDialog(
             title="Sample Analysis",
             text="This will load a demonstration with sample power structure data showing how Krystal analyzes relationships between corporations, government entities, and influential organizations.",
+            elevation=0,  # Reduced elevation
+            overlay_color=(0, 0, 0, 0.3),  # Lighter overlay
             buttons=[
                 MDFlatButton(
                     text="Cancel",
@@ -379,8 +382,8 @@ class AnalysisScreen(MDScreen):
             bar_width=dp(4),    # Thinner scrollbar
             bar_color=[0.2, 0.6, 0.8, 0.5]  # Custom scrollbar color
         )
-        content_layout = MDBoxLayout(orientation="vertical", padding=dp(20), spacing=dp(20), size_hint_y=None)
-        content_layout.bind(minimum_height=content_layout.setter('height'))
+        self.content_layout = MDBoxLayout(orientation="vertical", padding=dp(20), spacing=dp(20), size_hint_y=None)
+        self.content_layout.bind(minimum_height=self.content_layout.setter('height'))
         
         # Input Card
         input_card = MDCard(
@@ -496,16 +499,15 @@ class AnalysisScreen(MDScreen):
         input_card.add_widget(analysis_layout)
         input_card.add_widget(category_layout)
         input_card.add_widget(button_layout)
-        content_layout.add_widget(input_card)
+        self.content_layout.add_widget(input_card)
         
-        # Progress Card
+        # Progress Card - CREATE BUT DON'T ADD TO LAYOUT INITIALLY
         self.progress_card = MDCard(
             orientation="vertical",
             padding=dp(20),
             spacing=dp(15),
-            elevation=1,  # Reduced elevation
+            elevation=0,  # Set to 0 to eliminate shadows completely
             radius=[dp(15), dp(15), dp(15), dp(15)],
-            opacity=0,
             size_hint_y=None,
             height=dp(120)
         )
@@ -529,7 +531,8 @@ class AnalysisScreen(MDScreen):
         self.progress_card.add_widget(progress_title)
         self.progress_card.add_widget(self.status_label)
         self.progress_card.add_widget(self.progress_bar)
-        content_layout.add_widget(self.progress_card)
+        
+        # Don't add progress_card to content_layout here - we'll add/remove it dynamically
         
         # Results Section - DIRECTLY BELOW INPUT
         results_title = MDLabel(
@@ -539,7 +542,7 @@ class AnalysisScreen(MDScreen):
             size_hint_y=None,
             height=dp(40)
         )
-        content_layout.add_widget(results_title)
+        self.content_layout.add_widget(results_title)
         
         # Results container - this will hold the dynamic results
         self.results_container = MDBoxLayout(
@@ -548,10 +551,10 @@ class AnalysisScreen(MDScreen):
             size_hint_y=None,
             adaptive_height=True
         )
-        content_layout.add_widget(self.results_container)
+        self.content_layout.add_widget(self.results_container)
         
         # Set up the scroll view
-        self.content_scroll.add_widget(content_layout)
+        self.content_scroll.add_widget(self.content_layout)
         main_layout.add_widget(self.content_scroll)
         
         self.add_widget(main_layout)
@@ -609,7 +612,7 @@ class AnalysisScreen(MDScreen):
             keywords = ' '.join(keywords.split()).strip()  # Remove extra spaces
             
             # Convert to title case for better display
-            keywords = keywords.Title()
+            keywords = keywords.title()
             
             # If we have no meaningful keywords, use domain-based fallback
             if not keywords or len(keywords) < 3:
@@ -668,8 +671,11 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.disabled = True
         self.analyze_btn.text = "Analyzing..."
         
-        # Show progress card
-        self.progress_card.opacity = 1
+        # FIX: Add progress card to layout and show it
+        if self.progress_card.parent is None:
+            # Add progress card after input card but before results
+            input_card_index = self.content_layout.children.index(self.results_container) + 1
+            self.content_layout.add_widget(self.progress_card, index=input_card_index)
         
         # Clear previous results
         self.results_container.clear_widgets()
@@ -893,8 +899,16 @@ class AnalysisScreen(MDScreen):
             self.analyze_btn.disabled = False
             self.analyze_btn.text = "Start Analysis"
             
-            # Hide progress card after delay
-            Clock.schedule_once(lambda dt: setattr(self.progress_card, 'opacity', 0), 2)
+            # FIX: Completely remove progress card instead of just hiding it
+            def remove_progress_card(dt):
+                # Remove the progress card from layout to prevent shadow artifacts
+                if self.progress_card.parent:
+                    self.progress_card.parent.remove_widget(self.progress_card)
+                # Reset progress values
+                self.progress_value = 0
+                self.status_text = "Ready to analyze power structures"
+            
+            Clock.schedule_once(remove_progress_card, 0.5)
             
         except Exception as e:
             print(f"Analysis complete error: {e}")
@@ -1320,7 +1334,7 @@ class AnalysisScreen(MDScreen):
         
         # Add a final spacer to ensure everything is visible
         self.results_container.add_widget(MDBoxLayout(size_hint_y=None, height=dp(20)))
-    
+
     def show_network_visualization(self, instance=None):
         """Show interactive network visualization"""
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
@@ -1385,22 +1399,33 @@ class AnalysisScreen(MDScreen):
             
             content.add_widget(type_layout)
         
-        viz_dialog = MDDialog(
+        # FIX: Create dialog with reduced elevation and proper cleanup
+        self.viz_dialog = MDDialog(
             title="Network Visualization",
             type="custom",
             content_cls=content,
             size_hint=(0.9, 0.8),
+            elevation=0,  # Reduced elevation
+            overlay_color=(0, 0, 0, 0.3),  # Lighter overlay
             buttons=[
                 MDFlatButton(
                     text="Close",
                     theme_text_color="Custom",
                     text_color=[0.5, 0.5, 0.5, 1],
-                    on_release=lambda x: viz_dialog.dismiss()
+                    on_release=self._close_viz_dialog
                 ),
             ],
         )
-        viz_dialog.open()
+        self.viz_dialog.open()
     
+    def _close_viz_dialog(self, instance):
+        """Properly close visualization dialog to prevent shadow artifacts"""
+        if hasattr(self, 'viz_dialog') and self.viz_dialog:
+            self.viz_dialog.dismiss()
+            # Force garbage collection
+            import gc
+            gc.collect()  
+
     def set_analysis_type(self, button, analysis_type):
         """Set the active analysis type"""
         # Reset all buttons
@@ -1524,6 +1549,15 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.disabled = False
         self.analyze_btn.text = "Start Analysis"
         
+        # FIX: Remove progress card on error too
+        def remove_progress_card(dt):
+            if self.progress_card.parent:
+                self.progress_card.parent.remove_widget(self.progress_card)
+            self.progress_value = 0
+            self.status_text = "Ready to analyze power structures"
+        
+        Clock.schedule_once(remove_progress_card, 0.5)
+        
         self.results_container.clear_widgets()
         error_item = TwoLineListItem(
             text="Analysis Failed",
@@ -1544,9 +1578,12 @@ class AnalysisScreen(MDScreen):
     
     def show_help(self):
         """Show help dialog"""
+        # FIX: Create dialog with reduced elevation
         help_dialog = MDDialog(
             title="How to Use Krystal",
             text="1. Enter a news URL or search terms\n2. Select analysis type\n3. Choose news category (optional)\n4. View power structure mapping\n5. Explore connections and influence scores\n\nKrystal helps you uncover hidden relationships between powerful entities in news media.",
+            elevation=0,  # Reduced elevation
+            overlay_color=(0, 0, 0, 0.3),  # Lighter overlay
             buttons=[
                 MDFlatButton(
                     text="Got it",
@@ -1565,9 +1602,12 @@ class AnalysisScreen(MDScreen):
         if self.news_client.is_api_available():
             api_status = "🟢 Connected"
         
+        # FIX: Create dialog with reduced elevation
         settings_dialog = MDDialog(
             title="Settings & API Status",
             text=f"News API: {api_status}\n\nTo use real news data:\n1. Get API key from newsapi.org\n2. Set NEWS_API_KEY environment variable\n3. Restart the application",
+            elevation=0,  # Reduced elevation
+            overlay_color=(0, 0, 0, 0.3),  # Lighter overlay
             buttons=[
                 MDFlatButton(
                     text="Close",
@@ -1579,6 +1619,16 @@ class AnalysisScreen(MDScreen):
         )
         settings_dialog.open()
 
+    def on_leave(self, *args):
+        """Called when leaving the analysis screen - clean up any dialogs"""
+        # Close any open dialogs to prevent shadow artifacts
+        if hasattr(self, 'viz_dialog') and self.viz_dialog:
+            self.viz_dialog.dismiss()
+            self.viz_dialog = None
+        
+        # Force cleanup
+        import gc
+        gc.collect()
 
 class KrystalApp(MDApp):
     """Modern KivyMD application with enhanced UX"""
@@ -1588,12 +1638,16 @@ class KrystalApp(MDApp):
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
         
-        # Fix 4: Improve graphics performance
+        # Improve graphics performance
         from kivy.config import Config
         Config.set('graphics', 'multisamples', '0')  # Disable anti-aliasing for better performance
     
     def build(self):
         self.title = "Krystal - Power Structure Mapper"
+        Window.clearcolor = (0.95, 0.95, 0.98, 1)  # Light background
+        
+        # FIX: Ensure window background is properly set and prevent shadow artifacts
+        from kivy.core.window import Window
         Window.clearcolor = (0.95, 0.95, 0.98, 1)
         
         # Create screen manager
