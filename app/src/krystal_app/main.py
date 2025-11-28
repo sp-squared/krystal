@@ -6,6 +6,7 @@ GPL v3
 import kivy
 from kivy.app import App
 from kivy.clock import Clock
+from kivy.properties import NumericProperty, StringProperty, BooleanProperty
 from kivy.core.window import Window
 from kivy.uix.widget import Widget
 from kivy.uix.boxlayout import BoxLayout
