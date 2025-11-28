@@ -5,6 +5,7 @@ GPL v3
 
 from kivy.graphics import Color, Line, Ellipse
 from kivy.app import App
+from kivy.config import Config
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
 from kivy.properties import NumericProperty, StringProperty, BooleanProperty
@@ -103,21 +104,9 @@ class WelcomeScreen(MDScreen):
         self.build_ui()
     
     def build_ui(self):
-        #main_layout = MDBoxLayout(
-            #orientation="vertical",
-            #padding="20dp",
-            #spacing="20dp"
-        #)
-        #self.content_layout = MDBoxLayout(
-            #orientation="vertical", 
-            #size_hint_y=None,
-            #padding="10dp",
-            #spacing="10dp"
-
         main_layout = MDBoxLayout(orientation="vertical")
         
-        # FIX: Remove the nested header_layout definition and define it directly
-        header_layout = MDBoxLayout(orientation="vertical")  # Move this line here
+        header_layout = MDBoxLayout(orientation="vertical")
         
         self.icon_label = MDIconButton(
             icon="magnify",
@@ -141,7 +130,7 @@ class WelcomeScreen(MDScreen):
         
         header_layout.add_widget(self.icon_label)
         header_layout.add_widget(title_layout)
-    
+
         features_layout = MDBoxLayout(orientation="vertical")
         
         features_title = MDLabel(
@@ -177,15 +166,23 @@ class WelcomeScreen(MDScreen):
         features_layout.add_widget(features_title)
         features_layout.add_widget(features_list)
 
-        action_layout = MDBoxLayout(orientation="vertical")
+        action_layout = MDBoxLayout(
+            orientation="vertical",
+            padding="20dp",  # Add padding
+            spacing="10dp"   # Add spacing
+        )
         
         self.start_button = MDRaisedButton(
-            text="Start Analysis"
+            text="Start Analysis",
+            size_hint=(1, None),  # Fix size hint
+            height="48dp"         # Set explicit height
         )
         self.start_button.bind(on_press=self.start_analysis)
         
         sample_button = MDFlatButton(
-            text="Try Sample Data"
+            text="Try Sample Data",
+            size_hint=(1, None),  # Fix size hint  
+            height="48dp"         # Set explicit height
         )
         sample_button.bind(on_press=self.show_sample)
         
@@ -197,7 +194,7 @@ class WelcomeScreen(MDScreen):
         main_layout.add_widget(action_layout)
         
         self.add_widget(main_layout)
-    
+
     def start_analysis(self, instance):
         self.manager.current = 'analysis'
     
@@ -867,7 +864,11 @@ class KrystalApp(MDApp):
         super().__init__(**kwargs)
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
-        self.theme_cls.material_style = "M3"  # Use newer material design
+        
+        # Use newer material design
+        self.theme_cls.material_style = "M3"  
+        # Disable multisampling
+        Config.set('graphics', 'multisamples', '0')
 
     def build(self):
         self.title = "Krystal - Power Structure Mapper"
