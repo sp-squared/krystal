@@ -2,6 +2,8 @@
 
 > Mobile interface for power structure analysis
 
+Krystal is a mobile application that overlays power structure mapping onto news content using the Google News API and LittleSis API. The app reveals connections between corporations, government officials, and other powerful entities mentioned in news stories.
+
 Krystal is the mobile frontend that brings power structure mapping to your smartphone. Built with Kivy and Python, it provides an intuitive interface for analyzing power relationships in news media using the Krystal Core engine.
 
 ## 🎯 Mission
@@ -25,6 +27,40 @@ To make power structure analysis accessible on mobile devices, enabling users to
 - **APIs**: Google News, LittleSis, OpenSecrets
 - **Packaging**: Buildozer for Android/iOS deployment
 - **License**: GNU GPL v3
+
+## 🛠 Technology Stack
+
+- **Frontend**: Qt 6 (LGPL v3)
+- **Language**: C++/QML
+- **APIs**: Google News, LittleSis, OpenSecrets
+- **License**: GNU LGPL v3
+
+## 📄 License
+
+This project is licensed under the **GNU Lesser General Public License v3.0**.
+
+**Why LGPL v3?**
+
+- Ensures the core framework remains free and open
+- Allows linking with proprietary components (useful for some API integrations)
+- Maintains software freedom while enabling practical distribution
+- Aligns with our mission of transparency and accessibility
+
+See the [LICENSE](LICENSE) file for the complete license text.
+
+## 🚀 Getting Started
+
+[Development setup instructions to be added]
+
+## 🤝 Contributing
+
+We welcome contributions from developers who share our commitment to transparency and open knowledge. Please read our contributing guidelines before submitting pull requests.
+
+## 🔗 Data Sources
+
+- [LittleSis](https://littlesis.org/) - Public database of power relationships
+- [Google News API](https://newsapi.org/) - News aggregation
+- [OpenSecrets](https://www.opensecrets.org/) - Political funding data
 
 ## 📸 Screenshots
 
