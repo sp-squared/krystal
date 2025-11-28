@@ -446,8 +446,9 @@ class AnalysisScreen(MDScreen):
         main_layout.add_widget(content_layout)
         self.add_widget(main_layout)
 
+    
     def extract_keywords_from_url(self, url: str) -> str:
-        """Extract meaningful keywords from a URL for news search - COMBINED ENHANCED VERSION"""
+        """Extract meaningful keywords from a URL for news search - ENHANCED VERSION"""
         try:
             print(f"🔗 Processing URL: {url}")
             
@@ -494,27 +495,36 @@ class AnalysisScreen(MDScreen):
             for pattern in remove_patterns:
                 keywords_source = re.sub(pattern, '', keywords_source)
             
-            # Replace separators with spaces
+            # Replace separators with spaces and clean up
             keywords = keywords_source.replace('-', ' ').replace('/', ' ').replace('_', ' ')
+            keywords = ' '.join(keywords.split()).strip()  # Remove extra spaces
             
-            # Clean up: remove extra spaces and title case
-            keywords = ' '.join(keywords.split()).strip().title()
+            # Convert to title case for better display
+            keywords = keywords.title()
             
             # If we have no meaningful keywords, use domain-based fallback
             if not keywords or len(keywords) < 3:
                 domain_keywords = domain.replace('.com', '').replace('.org', '').replace('.net', '')
                 if domain_keywords and domain_keywords not in ['www', 'news']:
-                    keywords = domain_keywords.title() + " news"
+                    keywords = domain_keywords.title() + " News"
                 else:
-                    keywords = "current events"
+                    keywords = "Current Events"
             
-            print(f"🔍 Extracted search terms: {keywords}")
+            # Final cleanup: remove any remaining numbers and short words
+            keywords = re.sub(r'\b\d+\b', '', keywords)  # Remove standalone numbers
+            keywords = ' '.join([word for word in keywords.split() if len(word) > 2])  # Remove short words
+            keywords = keywords.strip()
+            
+            if not keywords:
+                keywords = "Breaking News"
+            
+            print(f"🔍 Extracted topic: {keywords}")
             return keywords
             
         except Exception as e:
             print(f"Error extracting keywords from URL: {e}")
-            return "breaking news"  # Generic fallback
-
+            return "Breaking News"
+        
     def analyze_article(self, instance):
         """Start analysis with enhanced UX - COMBINED URL HANDLING"""
         query = self.url_input.text.strip()
@@ -738,17 +748,19 @@ class AnalysisScreen(MDScreen):
             self._analysis_error(str(e))
 
     def _analysis_complete(self, query, category=None):
-        """Handle analysis completion with category - WITH URL DETECTION"""
+        """Handle analysis completion with category - WITH URL DETECTION & DISPLAY"""
         try:
-            # Check if query is a URL and extract keywords
+            # URL detection at the start
             original_query = query
+            extracted_topic = None
             is_url = False
             
             if query.startswith(('http://', 'https://', 'www.')):
                 is_url = True
-                query = self.extract_keywords_from_url(query)
+                extracted_topic = self.extract_keywords_from_url(query)
+                query = extracted_topic
                 print(f"🔗 URL detected: {original_query}")
-                print(f"🔍 Searching for topic: {query}")
+                print(f"🔍 Extracted topic: {extracted_topic}")
             
             # Get real news data with category
             articles = []
@@ -768,19 +780,19 @@ class AnalysisScreen(MDScreen):
             
             if not articles:
                 if is_url:
-                    self._analysis_error(f"No news found for topic: {query}. Try different search terms.")
+                    self._analysis_error(f"No news found for topic: '{extracted_topic}'. Try different search terms.")
                 else:
                     self._analysis_error("No articles found for your search. Try different terms or category.")
                 return
             
-            # Show API status
+            # Show API status with URL context if applicable
             api_status = "🔴 Mock Data" if not self.news_client.is_api_available() else "🟢 Real News API"
             
             if is_url:
-                self.show_message(f"Using {api_status} | Topic: {query}")
+                self.show_message(f"Using {api_status} | Topic: {extracted_topic}")
             else:
                 self.show_message(f"Using {api_status}")
-                
+            
             # Extract entities from articles (ONLY ONCE - no duplicates)
             entities = []
             for article in articles:
@@ -885,9 +897,11 @@ class AnalysisScreen(MDScreen):
                     "key_findings": ["Basic analysis completed", f"Found {len(entities)} entities with {len(relationships)} relationships"]
                 }
             
-            # Clear loading item and display results
+            # Clear loading item and display results with URL context
             self.results_layout.clear_widgets()
-            self.display_analysis_results(analysis, articles[0], api_status)
+            self.display_analysis_results(analysis, articles[0], api_status, 
+                                        original_url=original_query if is_url else None,
+                                        extracted_topic=extracted_topic if is_url else None)
             
             # Reset UI state
             self.is_analyzing = False
@@ -1008,8 +1022,10 @@ class AnalysisScreen(MDScreen):
         self.url_input.text = "technology sector influence"
         self.analyze_article(None)
     
-    def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data"):
-        """Display beautiful analysis results with API status - FIXED VERSION"""
+
+    def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data", 
+                            original_url=None, extracted_topic=None):
+        """Display beautiful analysis results with URL context"""
         
         # Safely extract source information
         source_name = "Unknown"
@@ -1018,9 +1034,25 @@ class AnalysisScreen(MDScreen):
             if isinstance(source_data, dict):
                 source_name = source_data.get('name', 'Unknown')
             else:
-                source_name = str(source_data)  # Handle case where source is a string
+                source_name = str(source_data)
         except:
             source_name = "Unknown"
+        
+        # Show URL context if this was a URL analysis
+        if original_url and extracted_topic:
+            url_info_item = TwoLineListItem(
+                text="🔗 URL Analysis",
+                secondary_text=f"From: {original_url[:60]}...",
+                bg_color=[0.9, 0.95, 1.0, 1]  # Light blue background for URL context
+            )
+            self.results_layout.add_widget(url_info_item)
+            
+            topic_item = TwoLineListItem(
+                text="📋 Extracted Topic",
+                secondary_text=extracted_topic,
+                bg_color=[0.95, 0.98, 1.0, 1]  # Very light blue
+            )
+            self.results_layout.add_widget(topic_item)
         
         # Article header with API status
         article_item = TwoLineListItem(
@@ -1034,7 +1066,7 @@ class AnalysisScreen(MDScreen):
         if "Mock" in api_status:
             help_item = OneLineListItem(
                 text="💡 Set NEWS_API_KEY environment variable for real news data",
-                bg_color=[1, 0.9, 0.9, 1]  # Light red background for notice
+                bg_color=[1, 0.9, 0.9, 1]
             )
             self.results_layout.add_widget(help_item)
         
@@ -1074,7 +1106,7 @@ class AnalysisScreen(MDScreen):
             for finding in analysis['key_findings'][:3]:
                 finding_item = OneLineListItem(text=f"• {finding}")
                 self.results_layout.add_widget(finding_item)
-    
+
     def show_message(self, message):
         """Show a message to the user"""
         # Simple message display
