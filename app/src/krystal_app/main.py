@@ -736,10 +736,20 @@ class AnalysisScreen(MDScreen):
             
         except Exception as e:
             self._analysis_error(str(e))
-            
+
     def _analysis_complete(self, query, category=None):
-        """Handle analysis completion with category - FINAL CONSOLIDATED VERSION"""
+        """Handle analysis completion with category - WITH URL DETECTION"""
         try:
+            # Check if query is a URL and extract keywords
+            original_query = query
+            is_url = False
+            
+            if query.startswith(('http://', 'https://', 'www.')):
+                is_url = True
+                query = self.extract_keywords_from_url(query)
+                print(f"🔗 URL detected: {original_query}")
+                print(f"🔍 Searching for topic: {query}")
+            
             # Get real news data with category
             articles = []
             if self.active_analysis_type == "News":
@@ -757,13 +767,20 @@ class AnalysisScreen(MDScreen):
                 articles = self.news_client.search_news(query, max_results=5)
             
             if not articles:
-                self._analysis_error("No articles found for your search. Try different terms or category.")
+                if is_url:
+                    self._analysis_error(f"No news found for topic: {query}. Try different search terms.")
+                else:
+                    self._analysis_error("No articles found for your search. Try different terms or category.")
                 return
             
             # Show API status
             api_status = "🔴 Mock Data" if not self.news_client.is_api_available() else "🟢 Real News API"
-            self.show_message(f"Using {api_status}")
             
+            if is_url:
+                self.show_message(f"Using {api_status} | Topic: {query}")
+            else:
+                self.show_message(f"Using {api_status}")
+                
             # Extract entities from articles (ONLY ONCE - no duplicates)
             entities = []
             for article in articles:
