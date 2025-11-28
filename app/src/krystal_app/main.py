@@ -208,7 +208,7 @@ class WelcomeScreen(MDScreen):
 
 
 class AnalysisScreen(MDScreen):
-    """Modern analysis screen with enhanced UX"""
+    """Modern analysis screen with enhanced UX and News API integration"""
     
     progress_value = NumericProperty(0)
     status_text = StringProperty("Ready to analyze power structures")
@@ -224,6 +224,8 @@ class AnalysisScreen(MDScreen):
         self.littlesis_client = LittleSisClient()
         
         self.dialog = None
+        self.active_analysis_type = "News"
+        self.active_news_category = None
         self.build_ui()
     
     def build_ui(self):
@@ -270,7 +272,7 @@ class AnalysisScreen(MDScreen):
             icon_left="magnify"
         )
         
-        # Analysis type buttons (replacing chips)
+        # Analysis type buttons
         analysis_layout = MDBoxLayout(orientation="horizontal", spacing=dp(10), adaptive_height=True)
         analysis_types = [
             ("News", "newspaper"),
@@ -287,8 +289,8 @@ class AnalysisScreen(MDScreen):
                 size_hint_x=None,
                 width=dp(120),
                 theme_text_color="Custom",
-                text_color=[0.2, 0.6, 0.8, 1],
-                line_color=[0.2, 0.6, 0.8, 1]
+                text_color=[0.5, 0.5, 0.5, 1],
+                line_color=[0.8, 0.8, 0.8, 1]
             )
             btn.bind(on_release=lambda x, t=text: self.set_analysis_type(x, t))
             analysis_layout.add_widget(btn)
@@ -297,6 +299,39 @@ class AnalysisScreen(MDScreen):
         # Set first button as active
         if self.analysis_buttons:
             self.set_analysis_type(self.analysis_buttons[0], "News")
+        
+        # News category selection
+        category_layout = MDBoxLayout(orientation="horizontal", spacing=dp(10), adaptive_height=True)
+        category_label = MDLabel(
+            text="Category:",
+            font_style="Body2",
+            theme_text_color="Secondary",
+            size_hint_x=0.3
+        )
+        
+        # News categories dropdown (simplified as buttons for now)
+        self.category_buttons = []
+        categories = ["All", "Technology", "Business", "Politics", "General"]
+        
+        category_buttons_layout = MDBoxLayout(orientation="horizontal", spacing=dp(5), adaptive_height=True)
+        for category in categories:
+            btn = MDRoundFlatButton(
+                text=category,
+                size_hint_x=None,
+                width=dp(80),
+                theme_text_color="Custom",
+                text_color=[0.5, 0.5, 0.5, 1],
+                line_color=[0.8, 0.8, 0.8, 1]
+            )
+            btn.bind(on_release=lambda x, c=category: self.set_news_category(x, c))
+            category_buttons_layout.add_widget(btn)
+            self.category_buttons.append(btn)
+        
+        # Set "All" as default category
+        self.set_news_category(self.category_buttons[0], "All")
+        
+        category_layout.add_widget(category_label)
+        category_layout.add_widget(category_buttons_layout)
         
         # Action buttons
         button_layout = MDBoxLayout(orientation="horizontal", spacing=dp(15), adaptive_height=True)
@@ -322,6 +357,7 @@ class AnalysisScreen(MDScreen):
         input_card.add_widget(input_title)
         input_card.add_widget(self.url_input)
         input_card.add_widget(analysis_layout)
+        input_card.add_widget(category_layout)
         input_card.add_widget(button_layout)
         content_layout.add_widget(input_card)
         
@@ -378,13 +414,27 @@ class AnalysisScreen(MDScreen):
         # Reset all buttons
         for btn in self.analysis_buttons:
             btn.md_bg_color = [1, 1, 1, 0]  # Transparent background
-            btn.text_color = [0.2, 0.6, 0.8, 1]
+            btn.text_color = [0.5, 0.5, 0.5, 1]
+            btn.line_color = [0.8, 0.8, 0.8, 1]
         
         # Set active button
         button.md_bg_color = [0.2, 0.6, 0.8, 1]
         button.text_color = [1, 1, 1, 1]
+        button.line_color = [0.2, 0.6, 0.8, 1]
         self.active_analysis_type = analysis_type
         self.top_bar.title = f"{analysis_type} Analysis"
+    
+    def set_news_category(self, button, category):
+        """Set the active news category"""
+        # Reset all category buttons
+        for btn in self.category_buttons:
+            btn.text_color = [0.5, 0.5, 0.5, 1]
+            btn.line_color = [0.8, 0.8, 0.8, 1]
+        
+        # Set active category button
+        button.text_color = [0.2, 0.6, 0.8, 1]
+        button.line_color = [0.2, 0.6, 0.8, 1]
+        self.active_news_category = category.lower() if category != "All" else None
     
     def analyze_article(self, instance):
         """Start analysis with enhanced UX"""
@@ -392,6 +442,9 @@ class AnalysisScreen(MDScreen):
         if not query:
             self.show_message("Please enter a URL or search terms")
             return
+        
+        # Use category if specified
+        category = getattr(self, 'active_news_category', None)
         
         if self.is_analyzing:
             return
@@ -407,20 +460,21 @@ class AnalysisScreen(MDScreen):
         self.results_layout.clear_widgets()
         
         # Add initial status item
+        category_text = f" (Category: {self.active_news_category})" if self.active_news_category else ""
         initial_item = TwoLineListItem(
-            text="Starting analysis...",
+            text=f"Starting analysis{category_text}...",
             secondary_text="Preparing to map power structures"
         )
         self.results_layout.add_widget(initial_item)
         
-        # Start analysis process
-        Clock.schedule_once(lambda dt: self._perform_analysis(query), 0.5)
+        # Start analysis process with category
+        Clock.schedule_once(lambda dt: self._perform_analysis(query, category), 0.5)
     
-    def _perform_analysis(self, query):
+    def _perform_analysis(self, query, category=None):
         """Perform analysis with detailed progress updates"""
         try:
             steps = [
-                (20, "Searching for relevant content..."),
+                (20, f"Searching {category if category else 'all'} news..."),
                 (40, "Extracting entities and organizations..."),
                 (60, "Mapping relationships and connections..."),
                 (80, "Analyzing power structures..."),
@@ -442,7 +496,7 @@ class AnalysisScreen(MDScreen):
                     Clock.schedule_once(lambda dt: update_step(step_index + 1), 1)
                 else:
                     # Analysis complete
-                    self._analysis_complete(query)
+                    self._analysis_complete(query, category)
             
             # Start the step-by-step progress
             update_step(0)
@@ -450,24 +504,57 @@ class AnalysisScreen(MDScreen):
         except Exception as e:
             self._analysis_error(str(e))
     
-    def _analysis_complete(self, query):
-        """Handle analysis completion"""
+    def _analysis_complete(self, query, category=None):
+        """Handle analysis completion with category"""
         try:
-            # Simulate getting results (replace with actual analysis)
-            articles = self.news_client.search_news(query, max_results=3)
-            entities = self.littlesis_client.search_entities(query)
+            # Get real news data with category
+            if category and category != "all":
+                articles = self.news_client.get_top_headlines(category=category, max_results=5)
+            else:
+                articles = self.news_client.search_news(query, max_results=5)
             
+            if not articles:
+                self._analysis_error("No articles found for your search")
+                return
+            
+            # Show API status
+            api_status = "🔴 Mock Data" if not self.news_client.is_api_available() else "🟢 Real News API"
+            self.show_message(f"Using {api_status}")
+            
+            # Extract entities from articles
+            entities = []
+            for article in articles:
+                article_entities = self.news_client.extract_entities(
+                    article.get('content', '') + ' ' + article.get('title', '')
+                )
+                entities.extend(article_entities)
+            
+            # Get additional entities from LittleSis based on search query
+            ls_entities = self.littlesis_client.search_entities(query)
+            entities.extend(ls_entities)
+            
+            # Remove duplicates based on entity name
+            unique_entities = {}
+            for entity in entities:
+                name = entity.get('name', '')
+                if name and name not in unique_entities:
+                    unique_entities[name] = entity
+            
+            entities = list(unique_entities.values())
+            
+            # Get relationships
             relationships = []
-            for entity in entities[:5]:  # Limit for demo
-                connections = self.littlesis_client.get_entity_connections(entity['id'])
-                relationships.extend(connections)
+            for entity in entities[:10]:  # Limit to avoid too many API calls
+                if 'id' in entity:
+                    connections = self.littlesis_client.get_entity_connections(entity['id'])
+                    relationships.extend(connections)
             
             # Perform actual analysis
             analysis = self.mapper.analyze_network(entities, relationships)
             
             # Clear loading item and display results
             self.results_layout.clear_widgets()
-            self.display_analysis_results(analysis, articles[0] if articles else {"title": query})
+            self.display_analysis_results(analysis, articles[0], api_status)
             
             # Reset UI state
             self.is_analyzing = False
@@ -476,8 +563,6 @@ class AnalysisScreen(MDScreen):
             
             # Hide progress card after delay
             Clock.schedule_once(lambda dt: setattr(self.progress_card, 'opacity', 0), 2)
-            
-            self.show_message("Analysis completed successfully!")
             
         except Exception as e:
             self._analysis_error(str(e))
@@ -508,15 +593,23 @@ class AnalysisScreen(MDScreen):
         self.url_input.text = "technology sector influence"
         self.analyze_article(None)
     
-    def display_analysis_results(self, analysis, article):
-        """Display beautiful analysis results"""
-        # Article header
+    def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data"):
+        """Display beautiful analysis results with API status"""
+        # Article header with API status
         article_item = TwoLineListItem(
             text=article.get('title', 'Analysis Results'),
-            secondary_text=f"Source: {article.get('source', 'Krystal Analysis')}",
+            secondary_text=f"Source: {article.get('source', 'Unknown')} | {api_status}",
             bg_color=[0.95, 0.95, 0.98, 1]
         )
         self.results_layout.add_widget(article_item)
+        
+        # Show how to get real data if using mock
+        if "Mock" in api_status:
+            help_item = OneLineListItem(
+                text="💡 Set NEWS_API_KEY environment variable for real news data",
+                bg_color=[1, 0.9, 0.9, 1]  # Light red background for notice
+            )
+            self.results_layout.add_widget(help_item)
         
         # Summary card
         summary_item = TwoLineListItem(
@@ -548,7 +641,7 @@ class AnalysisScreen(MDScreen):
     
     def show_message(self, message):
         """Show a message to the user"""
-        # Simple message display - in production, use MDApp snackbar
+        # Simple message display
         print(f"Message: {message}")
     
     def go_back(self):
@@ -559,7 +652,7 @@ class AnalysisScreen(MDScreen):
         """Show help dialog"""
         help_dialog = MDDialog(
             title="How to Use Krystal",
-            text="1. Enter a news URL or search terms\n2. Select analysis type\n3. View power structure mapping\n4. Explore connections and influence scores\n\nKrystal helps you uncover hidden relationships between powerful entities in news media.",
+            text="1. Enter a news URL or search terms\n2. Select analysis type\n3. Choose news category (optional)\n4. View power structure mapping\n5. Explore connections and influence scores\n\nKrystal helps you uncover hidden relationships between powerful entities in news media.",
             buttons=[
                 MDFlatButton(
                     text="Got it",
@@ -573,9 +666,14 @@ class AnalysisScreen(MDScreen):
     
     def show_settings(self):
         """Show settings dialog"""
+        # Check API status
+        api_status = "🔴 Not configured" 
+        if self.news_client.is_api_available():
+            api_status = "🟢 Connected"
+        
         settings_dialog = MDDialog(
-            title="Settings",
-            text="Settings will be available in a future update.",
+            title="Settings & API Status",
+            text=f"News API: {api_status}\n\nTo use real news data:\n1. Get API key from newsapi.org\n2. Set NEWS_API_KEY environment variable\n3. Restart the application",
             buttons=[
                 MDFlatButton(
                     text="Close",
@@ -614,7 +712,15 @@ class KrystalApp(MDApp):
     
     def on_start(self):
         """Called when the app starts"""
-        print("🚀 Krystal app started with enhanced UI!")
+        print("🚀 Krystal app started with News API integration!")
+        
+        # Check API status on startup
+        from krystal.data_sources import NewsClient
+        news_client = NewsClient()
+        if news_client.is_api_available():
+            print("✅ News API is available and ready!")
+        else:
+            print("ℹ️  Using mock news data. Set NEWS_API_KEY for real news.")
 
 
 def main():

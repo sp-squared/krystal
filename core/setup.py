@@ -10,6 +10,7 @@ setup(
         "networkx>=2.5",
         "pandas>=1.3.0",
         "numpy>=1.21.0",
+        "newsapi-python>=0.2.6",
     ],
     python_requires=">=3.8",
     author="Krystal Team",
