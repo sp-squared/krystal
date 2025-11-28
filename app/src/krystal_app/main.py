@@ -163,15 +163,7 @@ class NetworkGraphWidget(Widget):
         )
         popup.open()
 
-
 class WelcomeScreen(MDScreen):
-    """Modern welcome screen with animations and engaging design"""
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.name = "welcome"
-        self.build_ui()
-    
     def build_ui(self):
         # Main layout with gradient background
         main_layout = MDBoxLayout(
@@ -188,14 +180,13 @@ class WelcomeScreen(MDScreen):
             size_hint_y=0.4
         )
         
-        # App icon
-        self.icon_label = MDLabel(
-            text="🔍",
-            font_style="H2",
+        # App icon - Replace 🔍 with magnify icon
+        self.icon_label = MDIcon(
+            icon="magnify",
             theme_text_color="Custom",
             text_color=[0.2, 0.5, 0.8, 1],
             halign="center",
-            size_hint_y=0.6
+            font_size="64sp"
         )
         
         # App title
@@ -240,18 +231,19 @@ class WelcomeScreen(MDScreen):
         
         features_list = MDBoxLayout(orientation="vertical", spacing=dp(10))
         
+        # Replace emojis with Material Icons
         features = [
-            ("🔍", "Analyze news articles for power structures"),
-            ("📊", "Visualize relationship networks"),
-            ("🏛️", "Track corporate and government ties"),
-            ("🔒", "Privacy-first, no data collection")
+            ("magnify", "Analyze news articles for power structures"),
+            ("chart-box", "Visualize relationship networks"),
+            ("office-building", "Track corporate and government ties"),
+            ("lock", "Privacy-first, no data collection")
         ]
         
         for icon, text in features:
             feature_item = MDBoxLayout(orientation="horizontal", spacing=dp(15))
-            icon_label = MDLabel(
-                text=icon,
-                font_style="Body1",
+            icon_widget = MDIcon(
+                icon=icon,
+                theme_text_color="Primary",
                 size_hint_x=0.2
             )
             text_label = MDLabel(
@@ -260,13 +252,13 @@ class WelcomeScreen(MDScreen):
                 theme_text_color="Secondary",
                 size_hint_x=0.8
             )
-            feature_item.add_widget(icon_label)
+            feature_item.add_widget(icon_widget)
             feature_item.add_widget(text_label)
             features_list.add_widget(feature_item)
         
         features_card.add_widget(features_title)
         features_card.add_widget(features_list)
-        
+
         # Action buttons
         action_layout = MDBoxLayout(
             orientation="vertical",
@@ -886,8 +878,8 @@ class AnalysisScreen(MDScreen):
             self._analysis_error(f"Analysis failed: {str(e)}")
     
     def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data", 
-                               original_url=None, extracted_topic=None):
-        """Display beautiful analysis results with visualizations"""
+                            original_url=None, extracted_topic=None):
+        """Display beautiful analysis results with Material Icons"""
         
         # Safely extract source information
         source_name = "Unknown"
@@ -902,18 +894,18 @@ class AnalysisScreen(MDScreen):
         
         # Show URL context if this was a URL analysis
         if original_url and extracted_topic:
-            url_info_item = TwoLineListItem(
-                text="🔗 URL Analysis",
-                secondary_text=f"From: {original_url[:60]}...",
-                bg_color=[0.9, 0.95, 1.0, 1]
+            url_item = OneLineAvatarIconListItem(
+                text="URL Analysis",
+                secondary_text=f"From: {original_url[:60]}..."
             )
-            self.results_layout.add_widget(url_info_item)
+            url_item.add_widget(IconLeftWidget(icon="link"))
+            self.results_layout.add_widget(url_item)
             
-            topic_item = TwoLineListItem(
-                text="📋 Extracted Topic",
-                secondary_text=extracted_topic,
-                bg_color=[0.95, 0.98, 1.0, 1]
+            topic_item = OneLineAvatarIconListItem(
+                text="Extracted Topic",
+                secondary_text=extracted_topic
             )
+            topic_item.add_widget(IconLeftWidget(icon="text-box"))
             self.results_layout.add_widget(topic_item)
         
         # Article header with API status
@@ -926,18 +918,19 @@ class AnalysisScreen(MDScreen):
         
         # Show how to get real data if using mock
         if "Mock" in api_status:
-            help_item = OneLineListItem(
-                text="💡 Set NEWS_API_KEY environment variable for real news data",
-                bg_color=[1, 0.9, 0.9, 1]
+            help_item = OneLineAvatarIconListItem(
+                text="Set NEWS_API_KEY environment variable for real news data"
             )
+            help_item.add_widget(IconLeftWidget(icon="alert-circle"))
             self.results_layout.add_widget(help_item)
         
         # Network Visualization Section
         if analysis.get('summary', {}).get('entity_count', 0) > 0:
-            viz_header = OneLineListItem(
-                text="🌐 Network Visualization",
+            viz_header = OneLineAvatarIconListItem(
+                text="Network Visualization",
                 bg_color=[0.9, 0.95, 1.0, 1]
             )
+            viz_header.add_widget(IconLeftWidget(icon="graph"))
             self.results_layout.add_widget(viz_header)
             
             # Create network graph
@@ -960,6 +953,14 @@ class AnalysisScreen(MDScreen):
             
             viz_layout = MDBoxLayout(orientation="horizontal", adaptive_height=True)
             
+            # Icon mapping for entity types
+            type_icons = {
+                'person': "account",
+                'corporation': "office-building", 
+                'government': "government",
+                'organization': "account-group"
+            }
+            
             for entity_type, count in type_counts.items():
                 type_item = MDBoxLayout(
                     orientation="vertical",
@@ -968,20 +969,11 @@ class AnalysisScreen(MDScreen):
                     spacing=dp(5)
                 )
                 
-                # Color dot for entity type
-                colors = {
-                    'person': [0.2, 0.8, 0.2, 1],
-                    'corporation': [0.8, 0.2, 0.2, 1],
-                    'government': [0.2, 0.2, 0.8, 1],
-                    'organization': [0.8, 0.8, 0.2, 1]
-                }
-                color = colors.get(entity_type, [0.5, 0.5, 0.5, 1])
-                
-                dot = MDLabel(
-                    text="●",
-                    font_size='20sp',
-                    theme_text_color="Custom",
-                    text_color=color,
+                # Use Material Icon instead of colored dot
+                icon_widget = MDIcon(
+                    icon=type_icons.get(entity_type, "help-circle"),
+                    theme_text_color="Primary",
+                    font_size="24sp",
                     halign="center"
                 )
                 
@@ -992,7 +984,7 @@ class AnalysisScreen(MDScreen):
                     theme_text_color="Secondary"
                 )
                 
-                type_item.add_widget(dot)
+                type_item.add_widget(icon_widget)
                 type_item.add_widget(count_label)
                 viz_layout.add_widget(type_item)
             
@@ -1001,10 +993,11 @@ class AnalysisScreen(MDScreen):
         
         # Influence Rankings with Visual Indicators
         if analysis['influence_rankings']:
-            influencers_header = OneLineListItem(
-                text="🏆 Most Influential Entities",
+            influencers_header = OneLineAvatarIconListItem(
+                text="Most Influential Entities",
                 bg_color=[0.95, 0.98, 0.95, 1]
             )
+            influencers_header.add_widget(IconLeftWidget(icon="trophy"))
             self.results_layout.add_widget(influencers_header)
             
             for i, entity in enumerate(analysis['influence_rankings'][:5]):
@@ -1089,7 +1082,8 @@ class AnalysisScreen(MDScreen):
         # Network Statistics
         summary = analysis.get('summary', {})
         if summary:
-            stats_header = OneLineListItem(text="📊 Network Statistics")
+            stats_header = OneLineAvatarIconListItem(text="Network Statistics")
+            stats_header.add_widget(IconLeftWidget(icon="chart-box"))
             self.results_layout.add_widget(stats_header)
             
             stats_card = MDCard(
@@ -1101,15 +1095,25 @@ class AnalysisScreen(MDScreen):
                 elevation=1
             )
             
+            # Use Material Icons for stats
             stats = [
-                (f"👥 {summary.get('entity_count', 0)}", "Entities"),
-                (f"🔗 {summary.get('relationship_count', 0)}", "Relationships"),
-                (f"🌐 {summary.get('connected_components', 1)}", "Components"),
-                (f"📈 {summary.get('network_density', 0):.3f}", "Density")
+                ("account-multiple", f"{summary.get('entity_count', 0)}", "Entities"),
+                ("link", f"{summary.get('relationship_count', 0)}", "Relationships"),
+                ("graph", f"{summary.get('connected_components', 1)}", "Components"),
+                ("chart-line", f"{summary.get('network_density', 0):.3f}", "Density")
             ]
             
-            for value, label in stats:
+            for icon, value, label in stats:
                 stat_item = MDBoxLayout(orientation="vertical")
+                
+                # Icon
+                icon_widget = MDIcon(
+                    icon=icon,
+                    theme_text_color="Primary",
+                    halign="center",
+                    font_size="20sp"
+                )
+                
                 value_label = MDLabel(
                     text=value,
                     font_style="H6",
@@ -1122,23 +1126,24 @@ class AnalysisScreen(MDScreen):
                     halign="center",
                     theme_text_color="Secondary"
                 )
+                stat_item.add_widget(icon_widget)
                 stat_item.add_widget(value_label)
                 stat_item.add_widget(label_label)
                 stats_card.add_widget(stat_item)
             
             self.results_layout.add_widget(stats_card)
-
+        
         # Key findings
         if analysis.get('key_findings'):
-            findings_header = OneLineListItem(text="🔍 Key Findings")
+            findings_header = OneLineAvatarIconListItem(text="Key Findings")
+            findings_header.add_widget(IconLeftWidget(icon="magnify"))
             self.results_layout.add_widget(findings_header)
             
             for finding in analysis['key_findings'][:3]:
-                finding_item = OneLineListItem(
-                    text=f"✓ {finding}"
-                )
+                finding_item = OneLineAvatarIconListItem(text=finding)
+                finding_item.add_widget(IconLeftWidget(icon="check"))
                 self.results_layout.add_widget(finding_item)
-
+                
     def show_network_visualization(self, instance=None):
         """Show interactive network visualization"""
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
