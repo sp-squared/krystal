@@ -213,6 +213,32 @@ class AnalysisScreen(MDScreen):
     progress_value = NumericProperty(0)
     status_text = StringProperty("Ready to analyze power structures")
     is_analyzing = BooleanProperty(False)
+
+    def _ensure_entity_structure(self, entities):
+        """Ensure all entities have required fields for PowerMapper"""
+        processed_entities = []
+        
+        for i, entity in enumerate(entities):
+            # Ensure entity has required fields
+            if not isinstance(entity, dict):
+                continue
+                
+            # Ensure ID exists
+            if 'id' not in entity:
+                name = entity.get('name', f'entity_{i}')
+                entity['id'] = f"{name.lower().replace(' ', '_')}_{i}"
+            
+            # Ensure name exists
+            if 'name' not in entity:
+                entity['name'] = f"Entity {i}"
+                
+            # Ensure type exists
+            if 'type' not in entity:
+                entity['type'] = 'organization'  # Default type
+                
+            processed_entities.append(entity)
+        
+        return processed_entities
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -436,11 +462,6 @@ class AnalysisScreen(MDScreen):
         button.line_color = [0.2, 0.6, 0.8, 1]
         self.active_news_category = category.lower() if category != "All" else None
 
-
-
-
-
-
     def analyze_article(self, instance):
         """Start analysis with enhanced UX - FIXED VERSION"""
         query = self.url_input.text.strip()
@@ -508,13 +529,9 @@ class AnalysisScreen(MDScreen):
             
         except Exception as e:
             self._analysis_error(str(e))
-
-
+            
     def _analysis_complete(self, query, category=None):
         """Handle analysis completion with category - FIXED VERSION"""
-        # Add this at the start of _analysis_complete
-        print(f"DEBUG: Query='{query}', Category='{category}', AnalysisType='{self.active_analysis_type}'")
-        print(f"DEBUG: NewsAPI available: {self.news_client.is_api_available()}")
         try:
             # Get real news data with category
             articles = []
@@ -561,12 +578,15 @@ class AnalysisScreen(MDScreen):
                 print(f"LittleSis search failed: {e}")
                 # Continue with just news entities
             
-            # Remove duplicates based on entity name
+            # Ensure all entities have proper structure for PowerMapper
+            entities = self._ensure_entity_structure(entities)
+            
+            # Remove duplicates based on entity ID
             unique_entities = {}
             for entity in entities:
-                name = entity.get('name', '')
-                if name and name not in unique_entities:
-                    unique_entities[name] = entity
+                entity_id = entity.get('id')
+                if entity_id and entity_id not in unique_entities:
+                    unique_entities[entity_id] = entity
             
             entities = list(unique_entities.values())
             
@@ -574,15 +594,22 @@ class AnalysisScreen(MDScreen):
             relationships = []
             for entity in entities[:5]:  # Limit to avoid too many API calls
                 try:
-                    if 'id' in entity:
-                        connections = self.littlesis_client.get_entity_connections(entity['id'])
+                    entity_id = entity.get('id')
+                    if entity_id and not entity_id.startswith('entity_'):  # Only try for non-generated IDs
+                        connections = self.littlesis_client.get_entity_connections(entity_id)
+                        # Ensure connections have proper source/target format
+                        for conn in connections:
+                            if 'source' not in conn:
+                                conn['source'] = entity_id
+                            if 'target' not in conn:
+                                conn['target'] = conn.get('entity2_id', 'unknown')
                         relationships.extend(connections)
                 except Exception as e:
                     print(f"Failed to get connections for {entity.get('name', 'unknown')}: {e}")
                     continue
             
             # If no relationships found, create some sample ones
-            if not relationships:
+            if not relationships and len(entities) >= 2:
                 relationships = self._create_sample_relationships(entities)
             
             # Perform actual analysis
@@ -604,7 +631,7 @@ class AnalysisScreen(MDScreen):
             print(f"Analysis complete error: {e}")
             import traceback
             traceback.print_exc()
-            self._analysis_error(f"Analysis failed: {str(e)}")
+            self._analysis_error(f"Analysis failed: {str(e)}")   
 
     def _create_entities_from_query(self, query):
         """Create basic entities from search query when no entities are found"""
@@ -624,12 +651,15 @@ class AnalysisScreen(MDScreen):
         """Create sample relationships when no real ones are found"""
         relationships = []
         if len(entities) >= 2:
-            relationships.append({
-                'entity1': entities[0],
-                'entity2': entities[1],
-                'relationship': 'connected_to',
-                'description': f"{entities[0]['name']} connected to {entities[1]['name']}"
-            })
+            for i in range(min(3, len(entities) - 1)):
+                relationships.append({
+                    'source': entities[i]['id'],
+                    'target': entities[i + 1]['id'],
+                    'type': 'connected_to',
+                    'relationship': 'associated_with',
+                    'description': f"{entities[i]['name']} connected to {entities[i + 1]['name']}",
+                    'strength': 0.5 + (i * 0.1)  # Varying strength
+                })
         return relationships
 
     def _analysis_error(self, error_msg):
@@ -750,7 +780,6 @@ class AnalysisScreen(MDScreen):
         )
         settings_dialog.open()
 
-
 class KrystalApp(MDApp):
     """Modern KivyMD application with enhanced UX"""
     
@@ -787,7 +816,6 @@ class KrystalApp(MDApp):
         else:
             print("ℹ️  Using mock news data. Set NEWS_API_KEY for real news.")
 
-
 def main():
     """Main entry point"""
     try:
@@ -796,7 +824,6 @@ def main():
         print(f"❌ App error: {e}")
         import traceback
         traceback.print_exc()
-
 
 if __name__ == '__main__':
     main()

@@ -63,10 +63,24 @@ class PowerMapper:
             "key_findings": self._generate_key_findings(centrality_measures, community_structure)
         }
     
+
+
     def _build_network(self, entities: List[Dict], relationships: List[Dict]) -> None:
-        """Build network graph from entities and relationships"""
+        """Build network graph from entities and relationships - FIXED VERSION"""
         self.graph.clear()
-        self.entities = {entity['id']: entity for entity in entities}
+        
+        # Generate IDs for entities that don't have them
+        processed_entities = []
+        for i, entity in enumerate(entities):
+            if 'id' not in entity:
+                # Create a unique ID based on name or index
+                entity_id = entity.get('name', f"entity_{i}")
+                # Clean the ID to be alphanumeric
+                entity_id = ''.join(c for c in str(entity_id) if c.isalnum() or c in ('_', '-')).lower()
+                entity['id'] = entity_id
+            processed_entities.append(entity)
+        
+        self.entities = {entity['id']: entity for entity in processed_entities}
         self.relationships = relationships
         
         # Add entities as nodes
@@ -75,10 +89,14 @@ class PowerMapper:
         
         # Add relationships as edges with weights
         for rel in relationships:
-            if rel['source'] in self.entities and rel['target'] in self.entities:
+            source = rel.get('source')
+            target = rel.get('target')
+            
+            # Ensure both source and target exist in our entities
+            if source in self.entities and target in self.entities:
                 weight = rel.get('strength', 0.5)  # Default strength if not provided
                 if weight >= self.min_relationship_strength:
-                    self.graph.add_edge(rel['source'], rel['target'], **rel)
+                    self.graph.add_edge(source, target, **rel)
     
     def _calculate_centrality(self) -> Dict[str, Dict]:
         """Calculate various centrality measures for the network"""
