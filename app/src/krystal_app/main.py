@@ -162,6 +162,11 @@ class NetworkGraphWidget(Widget):
 
 
 class WelcomeScreen(MDScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = 'welcome'
+        self.build_ui()
+    
     def build_ui(self):
         # Main layout with gradient background
         main_layout = MDBoxLayout(
@@ -325,8 +330,7 @@ class WelcomeScreen(MDScreen):
         self.manager.current = 'analysis'
         analysis_screen = self.manager.get_screen('analysis')
         Clock.schedule_once(lambda dt: analysis_screen.load_sample_data(), 0.5)
-
-
+        
 class AnalysisScreen(MDScreen):
     """Modern analysis screen with enhanced UX and News API integration"""
     
@@ -347,9 +351,12 @@ class AnalysisScreen(MDScreen):
         self.active_analysis_type = "News"
         self.active_news_category = None
         self.current_analysis = None
-        self.build_ui()
+        Clock.schedule_once(lambda dt: self.build_ui(), 0.1)
     
     def build_ui(self):
+        # Clear any existing widgets
+        self.clear_widgets()
+        
         # Main layout
         main_layout = MDBoxLayout(orientation="vertical")
         
@@ -450,7 +457,8 @@ class AnalysisScreen(MDScreen):
             self.category_buttons.append(btn)
         
         # Set "All" as default category
-        self.set_news_category(self.category_buttons[0], "All")
+        if self.category_buttons:
+            self.set_news_category(self.category_buttons[0], "All")
         
         category_layout.add_widget(category_label)
         category_layout.add_widget(category_buttons_layout)
@@ -530,7 +538,7 @@ class AnalysisScreen(MDScreen):
         
         main_layout.add_widget(content_layout)
         self.add_widget(main_layout)
-    
+
     def extract_keywords_from_url(self, url: str) -> str:
         """Extract meaningful keywords from a URL for news search - ENHANCED VERSION"""
         try:
