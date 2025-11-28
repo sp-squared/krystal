@@ -1644,7 +1644,7 @@ class AnalysisScreen(MDScreen):
         # Force cleanup
         import gc
         gc.collect()
-        
+
 class KrystalApp(MDApp):
     """Modern KivyMD application with enhanced UX"""
     
@@ -1662,7 +1662,6 @@ class KrystalApp(MDApp):
         Window.clearcolor = (0.95, 0.95, 0.98, 1)
         
         # FIX: Set window background and prevent any overlay shadows
-        from kivy.core.window import Window
         Window.clearcolor = (0.95, 0.95, 0.98, 1)
         
         # Create screen manager
