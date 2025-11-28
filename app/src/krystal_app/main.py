@@ -188,7 +188,7 @@ class WelcomeScreen(MDScreen):
             icon="magnify",
             theme_text_color="Custom",
             text_color=[0.2, 0.5, 0.8, 1],
-            user_font_size="64sp",
+            font_size="64sp",
             disabled=True  # Make it non-interactive
         )
         
@@ -249,7 +249,7 @@ class WelcomeScreen(MDScreen):
                 theme_text_color="Primary",
                 size_hint_x=0.2,
                 disabled=True,
-                user_font_size="24sp"
+                font_size="24sp"
             )
             text_label = MDLabel(
                 text=text,
@@ -298,7 +298,7 @@ class WelcomeScreen(MDScreen):
         main_layout.add_widget(action_layout)
         
         self.add_widget(main_layout)
-    
+           
     def start_analysis(self, instance):
         """Navigate to analysis screen"""
         self.manager.current = 'analysis'
@@ -330,7 +330,7 @@ class WelcomeScreen(MDScreen):
         self.manager.current = 'analysis'
         analysis_screen = self.manager.get_screen('analysis')
         Clock.schedule_once(lambda dt: analysis_screen.load_sample_data(), 0.5)
-        
+
 class AnalysisScreen(MDScreen):
     """Modern analysis screen with enhanced UX and News API integration"""
     
@@ -981,7 +981,7 @@ class AnalysisScreen(MDScreen):
                 icon_widget = MDIconButton(
                     icon=type_icons.get(entity_type, "help-circle"),
                     theme_text_color="Primary",
-                    user_font_size="24sp",
+                    font_size="24sp",
                     disabled=True,
                     size_hint=(1, 0.6)
                 )
@@ -1119,7 +1119,7 @@ class AnalysisScreen(MDScreen):
                 icon_widget = MDIconButton(
                     icon=icon,
                     theme_text_color="Primary",
-                    user_font_size="20sp",
+                    font_size="20sp",
                     disabled=True,
                     size_hint=(1, 0.6)
                 )
@@ -1153,7 +1153,7 @@ class AnalysisScreen(MDScreen):
                 finding_item = OneLineAvatarIconListItem(text=finding)
                 finding_item.add_widget(IconLeftWidget(icon="check"))
                 self.results_layout.add_widget(finding_item)
-
+                
     def show_network_visualization(self, instance=None):
         """Show interactive network visualization"""
         if not hasattr(self, 'current_analysis') or not self.current_analysis:
