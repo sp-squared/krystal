@@ -602,32 +602,44 @@ class AnalysisScreen(MDScreen):
                     unique_entities[entity_id] = entity
             
             entities = list(unique_entities.values())
-            
-            # Get relationships (with error handling)
-            
-        # Get relationships (with better error handling)
+                
+            # Get relationships (with better error handling)
             relationships = []
             for entity in entities[:5]:  # Limit to avoid too many API calls
                 try:
                     entity_id = entity.get('id')
                     if entity_id and not str(entity_id).startswith('entity_'):  # Only try for non-generated IDs
-                        print(f"DEBUG: Fetching connections for {entity['name']} (ID: {entity_id})")
-                        connections = self.littlesis_client.get_entity_connections(str(entity_id))
+                        print(f"DEBUG: Fetching connections for {entity['name']} (ID: {entity_id}, Type: {type(entity_id)})")
                         
-                        # Ensure connections have proper source/target format
-                        for conn in connections:
-                            if 'source' not in conn:
-                                conn['source'] = str(entity_id)
-                            if 'target' not in conn:
-                                # Try different possible target fields
-                                target = conn.get('entity2_id') or conn.get('target_id') or 'unknown'
-                                conn['target'] = str(target)
-                            # Ensure strength field exists
-                            if 'strength' not in conn:
-                                conn['strength'] = 0.5
-                        
-                        relationships.extend(connections)
-                        print(f"DEBUG: Found {len(connections)} connections for {entity['name']}")
+                        # Ensure we're passing the correct type to LittleSis
+                        # LittleSis typically expects integer IDs
+                        try:
+                            # Try to convert to integer if it looks like a number
+                            if isinstance(entity_id, str) and entity_id.isdigit():
+                                littlesis_id = int(entity_id)
+                            else:
+                                littlesis_id = entity_id
+                                
+                            connections = self.littlesis_client.get_entity_connections(littlesis_id)
+                            
+                            # Ensure connections have proper source/target format
+                            for conn in connections:
+                                if 'source' not in conn:
+                                    conn['source'] = str(entity_id)  # Keep as string for our graph
+                                if 'target' not in conn:
+                                    # Try different possible target fields
+                                    target = conn.get('entity2_id') or conn.get('target_id') or conn.get('id') or 'unknown'
+                                    conn['target'] = str(target)  # Convert to string for consistency
+                                # Ensure strength field exists
+                                if 'strength' not in conn:
+                                    conn['strength'] = 0.5
+                            
+                            relationships.extend(connections)
+                            print(f"DEBUG: Found {len(connections)} connections for {entity['name']}")
+                            
+                        except Exception as inner_e:
+                            print(f"LittleSis API error for {entity['name']}: {inner_e}")
+                            continue
                         
                 except Exception as e:
                     print(f"Failed to get connections for {entity.get('name', 'unknown')}: {e}")
@@ -642,7 +654,7 @@ class AnalysisScreen(MDScreen):
             
             # Perform actual analysis
             analysis = self.mapper.analyze_network(entities, relationships)
-            
+        
             # Clear loading item and display results
             self.results_layout.clear_widgets()
             self.display_analysis_results(analysis, articles[0], api_status)
