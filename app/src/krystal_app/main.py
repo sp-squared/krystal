@@ -11,6 +11,10 @@ from kivy.metrics import dp
 from kivy.properties import StringProperty, NumericProperty, ListProperty, BooleanProperty
 from kivy.animation import Animation
 from kivy.uix.modalview import ModalView
+from kivy.graphics import Color, Line, Ellipse, Rectangle
+from kivy.uix.widget import Widget
+import math
+import re
 
 # KivyMD Components
 from kivymd.app import MDApp
@@ -22,7 +26,7 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.button import MDRaisedButton, MDFlatButton, MDRoundFlatButton, MDIconButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.progressbar import MDProgressBar
-from kivymd.uix.list import MDList, OneLineListItem, OneLineIconListItem, TwoLineListItem
+from kivymd.uix.list import MDList, OneLineListItem, OneLineIconListItem, TwoLineListItem, OneLineAvatarIconListItem
 from kivymd.uix.toolbar import MDTopAppBar
 from kivymd.uix.navigationdrawer import MDNavigationDrawer
 from kivymd.uix.screen import MDScreen
@@ -34,6 +38,127 @@ from kivymd.uix.slider import MDSlider
 # Core functionality
 from krystal.power_mapper import PowerMapper, create_sample_network
 from krystal.data_sources import LittleSisClient, NewsClient
+
+
+class NetworkGraphWidget(Widget):
+    """Interactive network graph visualization"""
+    
+    def __init__(self, entities, relationships, **kwargs):
+        super().__init__(**kwargs)
+        self.entities = entities
+        self.relationships = relationships
+        self.node_positions = {}
+        self.selected_node = None
+        self.bind(size=self._update_graph, pos=self._update_graph)
+        
+    def _update_graph(self, *args):
+        """Update graph layout when widget size changes"""
+        self.canvas.clear()
+        self._draw_network()
+    
+    def _draw_network(self):
+        """Draw the network graph"""
+        if not self.entities or not self.relationships:
+            return
+            
+        # Calculate node positions in a circle
+        center_x = self.center_x
+        center_y = self.center_y
+        radius = min(self.width, self.height) * 0.35
+        num_nodes = len(self.entities)
+        
+        with self.canvas:
+            # Draw relationships (edges)
+            for rel in self.relationships:
+                source_id = rel.get('source')
+                target_id = rel.get('target')
+                
+                if source_id in self.node_positions and target_id in self.node_positions:
+                    src_x, src_y = self.node_positions[source_id]
+                    tgt_x, tgt_y = self.node_positions[target_id]
+                    
+                    # Color based on relationship strength
+                    strength = rel.get('strength', 0.5)
+                    Color(0.3, 0.3, 0.8, strength)
+                    
+                    Line(points=[src_x, src_y, tgt_x, tgt_y], width=1.5)
+            
+            # Draw entities (nodes)
+            for i, entity in enumerate(self.entities):
+                entity_id = entity.get('id')
+                angle = 2 * math.pi * i / num_nodes
+                x = center_x + radius * math.cos(angle)
+                y = center_y + radius * math.sin(angle)
+                
+                self.node_positions[entity_id] = (x, y)
+                
+                # Color based on entity type
+                entity_type = entity.get('type', 'organization')
+                colors = {
+                    'person': (0.2, 0.8, 0.2),      # Green
+                    'corporation': (0.8, 0.2, 0.2), # Red
+                    'government': (0.2, 0.2, 0.8),  # Blue
+                    'organization': (0.8, 0.8, 0.2) # Yellow
+                }
+                color = colors.get(entity_type, (0.5, 0.5, 0.5))
+                
+                Color(*color)
+                Ellipse(pos=(x-15, y-15), size=(30, 30))
+                
+                # Node label
+                Color(0, 0, 0, 1)
+                name = entity.get('name', 'Unknown')
+                if len(name) > 12:
+                    name = name[:12] + "..."
+    
+    def on_touch_down(self, touch):
+        """Handle node clicks"""
+        for entity_id, (x, y) in self.node_positions.items():
+            if abs(touch.x - x) < 20 and abs(touch.y - y) < 20:
+                entity = next((e for e in self.entities if e.get('id') == entity_id), None)
+                if entity:
+                    self.show_node_info(entity, touch)
+                return True
+        return super().on_touch_down(touch)
+    
+    def show_node_info(self, entity, touch):
+        """Show entity information when node is clicked"""
+        # Create a popup with entity details
+        from kivy.uix.popup import Popup
+        from kivy.uix.boxlayout import BoxLayout
+        from kivy.uix.label import Label
+        
+        content = BoxLayout(orientation='vertical', padding=10)
+        
+        name_label = Label(
+            text=f"🏢 {entity.get('name', 'Unknown')}",
+            font_size='16sp',
+            bold=True,
+            size_hint_y=None,
+            height=40
+        )
+        
+        type_label = Label(
+            text=f"Type: {entity.get('type', 'Unknown').title()}",
+            font_size='14sp'
+        )
+        
+        influence_label = Label(
+            text=f"Influence Score: {entity.get('influence_score', 0):.1f}",
+            font_size='14sp'
+        )
+        
+        content.add_widget(name_label)
+        content.add_widget(type_label)
+        content.add_widget(influence_label)
+        
+        popup = Popup(
+            title='Entity Details',
+            content=content,
+            size_hint=(0.6, 0.4),
+            auto_dismiss=True
+        )
+        popup.open()
 
 
 class WelcomeScreen(MDScreen):
@@ -213,43 +338,6 @@ class AnalysisScreen(MDScreen):
     progress_value = NumericProperty(0)
     status_text = StringProperty("Ready to analyze power structures")
     is_analyzing = BooleanProperty(False)
-
-    def _ensure_entity_structure(self, entities):
-        """Ensure all entities have required fields for PowerMapper - ENHANCED VERSION"""
-        processed_entities = []
-        
-        for i, entity in enumerate(entities):
-            # Ensure entity has required fields
-            if not isinstance(entity, dict):
-                continue
-                
-            # Ensure ID exists and is a string
-            if 'id' not in entity:
-                name = entity.get('name', f'entity_{i}')
-                # Create a unique ID based on name and index
-                entity_id = f"{name.lower().replace(' ', '_')}_{i}_{hash(name) % 10000}"
-                entity['id'] = entity_id
-            
-            # Ensure name exists
-            if 'name' not in entity:
-                entity['name'] = f"Entity {i}"
-                
-            # Ensure type exists
-            if 'type' not in entity:
-                # Try to infer type from name or context
-                name_lower = entity['name'].lower()
-                if any(word in name_lower for word in ['corp', 'inc', 'ltd', 'company', 'group']):
-                    entity['type'] = 'corporation'
-                elif any(word in name_lower for word in ['ceo', 'president', 'director', 'executive']):
-                    entity['type'] = 'person'
-                elif any(word in name_lower for word in ['gov', 'agency', 'department', 'administration']):
-                    entity['type'] = 'government'
-                else:
-                    entity['type'] = 'organization'
-                
-            processed_entities.append(entity)
-        
-        return processed_entities
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -263,6 +351,7 @@ class AnalysisScreen(MDScreen):
         self.dialog = None
         self.active_analysis_type = "News"
         self.active_news_category = None
+        self.current_analysis = None
         self.build_ui()
     
     def build_ui(self):
@@ -277,6 +366,7 @@ class AnalysisScreen(MDScreen):
             specific_text_color=[1, 1, 1, 1],
             left_action_items=[["arrow-left", lambda x: self.go_back()]],
             right_action_items=[
+                ["chart-box", lambda x: self.show_network_visualization()],
                 ["help", lambda x: self.show_help()],
                 ["cog", lambda x: self.show_settings()],
             ]
@@ -445,7 +535,6 @@ class AnalysisScreen(MDScreen):
         
         main_layout.add_widget(content_layout)
         self.add_widget(main_layout)
-
     
     def extract_keywords_from_url(self, url: str) -> str:
         """Extract meaningful keywords from a URL for news search - ENHANCED VERSION"""
@@ -468,8 +557,8 @@ class AnalysisScreen(MDScreen):
             
             # Common news domains to ignore in search
             news_domains = ['cnn.com', 'bbc.com', 'reuters.com', 'apnews.com', 'theguardian.com', 
-                        'nytimes.com', 'washingtonpost.com', 'foxnews.com', 'nbcnews.com',
-                        'wsj.com', 'bloomberg.com', 'latimes.com', 'usatoday.com']
+                           'nytimes.com', 'washingtonpost.com', 'foxnews.com', 'nbcnews.com',
+                           'wsj.com', 'bloomberg.com', 'latimes.com', 'usatoday.com']
             
             # If it's a known news domain, focus on the path
             if any(domain in nd or nd in domain for nd in news_domains):
@@ -524,21 +613,20 @@ class AnalysisScreen(MDScreen):
         except Exception as e:
             print(f"Error extracting keywords from URL: {e}")
             return "Breaking News"
-        
+    
     def analyze_article(self, instance):
-        """Start analysis with enhanced UX - COMBINED URL HANDLING"""
+        """Start analysis with enhanced UX - URL AWARE VERSION"""
         query = self.url_input.text.strip()
         if not query:
             self.show_message("Please enter a URL or search terms")
             return
         
-        # Check if input is a URL
+        # Check if input is a URL and extract keywords
         is_url = False
         original_query = query
         
         if query.startswith(('http://', 'https://', 'www.')):
             is_url = True
-            # Extract meaningful keywords from URL
             query = self.extract_keywords_from_url(query)
             print(f"🔗 URL detected: {original_query}")
             print(f"🔍 Searching for topic: {query}")
@@ -583,136 +671,7 @@ class AnalysisScreen(MDScreen):
         
         # Start analysis process with category
         Clock.schedule_once(lambda dt: self._perform_analysis(query, category), 0.5)
-
-    def demonstrate_littlesis_in_ui(self):
-        """Demonstrate LittleSis functionality in the UI"""
-        try:
-            # Clear previous results
-            self.results_layout.clear_widgets()
-            
-            # Add header
-            header = OneLineListItem(text="🔍 LittleSis Network Analysis")
-            self.results_layout.add_widget(header)
-            
-            # Search for entities related to current query
-            current_query = self.url_input.text.strip() or "technology"
-            entities = self.littlesis_client.search_entities(current_query, per_page=5)
-            
-            # Display entities found
-            entities_header = OneLineListItem(text=f"📋 Found {len(entities)} Entities")
-            self.results_layout.add_widget(entities_header)
-            
-            for entity in entities:
-                entity_item = TwoLineListItem(
-                    text=entity['name'],
-                    secondary_text=f"Type: {entity['type']} | Influence: {entity['influence_score']}"
-                )
-                self.results_layout.add_widget(entity_item)
-            
-            # Show network connections
-            if entities:
-                connections_header = OneLineListItem(text="🔗 Network Connections")
-                self.results_layout.add_widget(connections_header)
-                
-                total_connections = 0
-                for entity in entities[:3]:  # Show connections for first 3 entities
-                    connections = self.littlesis_client.get_entity_connections(
-                        entity['id'], 
-                        max_connections=3
-                    )
-                    total_connections += len(connections)
-                    
-                    for conn in connections:
-                        conn_item = TwoLineListItem(
-                            text=f"{entity['name']} → {conn['entity2_name']}",
-                            secondary_text=f"Relationship: {conn['relationship_type']} | Strength: {conn['strength']:.2f}"
-                        )
-                        self.results_layout.add_widget(conn_item)
-                
-                # Summary
-                summary_item = TwoLineListItem(
-                    text="📊 Network Summary",
-                    secondary_text=f"{len(entities)} entities with {total_connections} total connections"
-                )
-                self.results_layout.add_widget(summary_item)
-            
-        except Exception as e:
-            error_item = OneLineListItem(text=f"❌ LittleSis demo failed: {str(e)}")
-            self.results_layout.add_widget(error_item)
-
-    # Add a button to trigger LittleSis demo in your UI
-    def add_littlesis_demo_button(self):
-        """Add a button to demonstrate LittleSis functionality"""
-        littlesis_button = MDRaisedButton(
-            text="Test LittleSis Network",
-            size_hint_y=None,
-            height=dp(40),
-            md_bg_color=[0.3, 0.5, 0.7, 1],
-            on_release=lambda x: self.demonstrate_littlesis_in_ui()
-        )
-        # Add this button to your UI layout
-
-    def set_analysis_type(self, button, analysis_type):
-        """Set the active analysis type"""
-        # Reset all buttons
-        for btn in self.analysis_buttons:
-            btn.md_bg_color = [1, 1, 1, 0]  # Transparent background
-            btn.text_color = [0.5, 0.5, 0.5, 1]
-            btn.line_color = [0.8, 0.8, 0.8, 1]
-        
-        # Set active button
-        button.md_bg_color = [0.2, 0.6, 0.8, 1]
-        button.text_color = [1, 1, 1, 1]
-        button.line_color = [0.2, 0.6, 0.8, 1]
-        self.active_analysis_type = analysis_type
-        self.top_bar.title = f"{analysis_type} Analysis"
     
-    def set_news_category(self, button, category):
-        """Set the active news category"""
-        # Reset all category buttons
-        for btn in self.category_buttons:
-            btn.text_color = [0.5, 0.5, 0.5, 1]
-            btn.line_color = [0.8, 0.8, 0.8, 1]
-        
-        # Set active category button
-        button.text_color = [0.2, 0.6, 0.8, 1]
-        button.line_color = [0.2, 0.6, 0.8, 1]
-        self.active_news_category = category.lower() if category != "All" else None
-
-    def analyze_article(self, instance):
-        """Start analysis with enhanced UX - FIXED VERSION"""
-        query = self.url_input.text.strip()
-        if not query:
-            self.show_message("Please enter a URL or search terms")
-            return
-        
-        # Get the active category
-        category = getattr(self, 'active_news_category', None)
-        
-        if self.is_analyzing:
-            return
-        
-        self.is_analyzing = True
-        self.analyze_btn.disabled = True
-        self.analyze_btn.text = "Analyzing..."
-        
-        # Show progress card
-        self.progress_card.opacity = 1
-        
-        # Clear previous results
-        self.results_layout.clear_widgets()
-        
-        # Add initial status item
-        category_text = f" (Category: {category})" if category and category != "all" else ""
-        initial_item = TwoLineListItem(
-            text=f"Starting {self.active_analysis_type} analysis{category_text}...",
-            secondary_text="Preparing to map power structures"
-        )
-        self.results_layout.add_widget(initial_item)
-        
-        # Start analysis process with category
-        Clock.schedule_once(lambda dt: self._perform_analysis(query, category), 0.5)
-
     def _perform_analysis(self, query, category=None):
         """Perform analysis with detailed progress updates - URL AWARE"""
         try:
@@ -740,13 +699,13 @@ class AnalysisScreen(MDScreen):
                 else:
                     # Analysis complete
                     self._analysis_complete(query, category)
-            
+        
             # Start the step-by-step progress
             update_step(0)
             
         except Exception as e:
             self._analysis_error(str(e))
-
+    
     def _analysis_complete(self, query, category=None):
         """Handle analysis completion with category - WITH URL DETECTION & DISPLAY"""
         try:
@@ -880,6 +839,8 @@ class AnalysisScreen(MDScreen):
             # Perform actual analysis with error handling
             try:
                 analysis = self.mapper.analyze_network(entities, relationships)
+                # Store relationships in analysis for visualization
+                analysis['relationships'] = relationships
             except Exception as e:
                 print(f"PowerMapper analysis error: {e}")
                 # Create a basic analysis result
@@ -894,8 +855,12 @@ class AnalysisScreen(MDScreen):
                     "communities": {"communities": [], "modularity": 0.0},
                     "influence_rankings": sorted(entities, key=lambda x: x.get('influence_score', 0), reverse=True),
                     "structural_analysis": {},
-                    "key_findings": ["Basic analysis completed", f"Found {len(entities)} entities with {len(relationships)} relationships"]
+                    "key_findings": ["Basic analysis completed", f"Found {len(entities)} entities with {len(relationships)} relationships"],
+                    "relationships": relationships
                 }
+            
+            # Store current analysis for visualization
+            self.current_analysis = analysis
             
             # Clear loading item and display results with URL context
             self.results_layout.clear_widgets()
@@ -916,7 +881,380 @@ class AnalysisScreen(MDScreen):
             import traceback
             traceback.print_exc()
             self._analysis_error(f"Analysis failed: {str(e)}")
-
+    
+    def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data", 
+                               original_url=None, extracted_topic=None):
+        """Display beautiful analysis results with visualizations"""
+        
+        # Safely extract source information
+        source_name = "Unknown"
+        try:
+            source_data = article.get('source', {})
+            if isinstance(source_data, dict):
+                source_name = source_data.get('name', 'Unknown')
+            else:
+                source_name = str(source_data)
+        except:
+            source_name = "Unknown"
+        
+        # Show URL context if this was a URL analysis
+        if original_url and extracted_topic:
+            url_info_item = TwoLineListItem(
+                text="🔗 URL Analysis",
+                secondary_text=f"From: {original_url[:60]}...",
+                bg_color=[0.9, 0.95, 1.0, 1]
+            )
+            self.results_layout.add_widget(url_info_item)
+            
+            topic_item = TwoLineListItem(
+                text="📋 Extracted Topic",
+                secondary_text=extracted_topic,
+                bg_color=[0.95, 0.98, 1.0, 1]
+            )
+            self.results_layout.add_widget(topic_item)
+        
+        # Article header with API status
+        article_item = TwoLineListItem(
+            text=article.get('title', 'Analysis Results'),
+            secondary_text=f"Source: {source_name} | {api_status}",
+            bg_color=[0.95, 0.95, 0.98, 1]
+        )
+        self.results_layout.add_widget(article_item)
+        
+        # Show how to get real data if using mock
+        if "Mock" in api_status:
+            help_item = OneLineListItem(
+                text="💡 Set NEWS_API_KEY environment variable for real news data",
+                bg_color=[1, 0.9, 0.9, 1]
+            )
+            self.results_layout.add_widget(help_item)
+        
+        # Network Visualization Section
+        if analysis.get('summary', {}).get('entity_count', 0) > 0:
+            viz_header = OneLineListItem(
+                text="🌐 Network Visualization",
+                bg_color=[0.9, 0.95, 1.0, 1]
+            )
+            self.results_layout.add_widget(viz_header)
+            
+            # Create network graph
+            entities = analysis.get('influence_rankings', [])
+            relationships = analysis.get('relationships', [])
+            
+            # Entity type distribution
+            type_counts = {}
+            for entity in entities:
+                entity_type = entity.get('type', 'unknown')
+                type_counts[entity_type] = type_counts.get(entity_type, 0) + 1
+            
+            viz_card = MDCard(
+                orientation="vertical",
+                padding=dp(15),
+                size_hint_y=None,
+                height=dp(120),
+                elevation=2
+            )
+            
+            viz_layout = MDBoxLayout(orientation="horizontal", adaptive_height=True)
+            
+            for entity_type, count in type_counts.items():
+                type_item = MDBoxLayout(
+                    orientation="vertical",
+                    size_hint_x=None,
+                    width=dp(80),
+                    spacing=dp(5)
+                )
+                
+                # Color dot for entity type
+                colors = {
+                    'person': [0.2, 0.8, 0.2, 1],
+                    'corporation': [0.8, 0.2, 0.2, 1],
+                    'government': [0.2, 0.2, 0.8, 1],
+                    'organization': [0.8, 0.8, 0.2, 1]
+                }
+                color = colors.get(entity_type, [0.5, 0.5, 0.5, 1])
+                
+                dot = MDLabel(
+                    text="●",
+                    font_size='20sp',
+                    theme_text_color="Custom",
+                    text_color=color,
+                    halign="center"
+                )
+                
+                count_label = MDLabel(
+                    text=f"{count} {entity_type.title()}",
+                    font_style="Caption",
+                    halign="center",
+                    theme_text_color="Secondary"
+                )
+                
+                type_item.add_widget(dot)
+                type_item.add_widget(count_label)
+                viz_layout.add_widget(type_item)
+            
+            viz_card.add_widget(viz_layout)
+            self.results_layout.add_widget(viz_card)
+        
+        # Influence Rankings with Visual Indicators
+        if analysis['influence_rankings']:
+            influencers_header = OneLineListItem(
+                text="🏆 Most Influential Entities",
+                bg_color=[0.95, 0.98, 0.95, 1]
+            )
+            self.results_layout.add_widget(influencers_header)
+            
+            for i, entity in enumerate(analysis['influence_rankings'][:5]):
+                score = entity.get('influence_score', 0)
+                entity_type = entity.get('type', 'Entity').title()
+                
+                # Create a visual bar for influence score
+                influence_item = MDBoxLayout(
+                    orientation="horizontal",
+                    adaptive_height=True,
+                    padding=dp(10)
+                )
+                
+                # Rank and name
+                text_layout = MDBoxLayout(
+                    orientation="vertical",
+                    size_hint_x=0.6
+                )
+                
+                rank_label = MDLabel(
+                    text=f"{i+1}. {entity['name']}",
+                    font_style="Body1",
+                    theme_text_color="Primary"
+                )
+                
+                type_label = MDLabel(
+                    text=entity_type,
+                    font_style="Caption",
+                    theme_text_color="Secondary"
+                )
+                
+                text_layout.add_widget(rank_label)
+                text_layout.add_widget(type_label)
+                
+                # Influence bar
+                bar_layout = MDBoxLayout(
+                    orientation="vertical",
+                    size_hint_x=0.4,
+                    spacing=dp(5)
+                )
+                
+                score_label = MDLabel(
+                    text=f"{score:.1f}",
+                    font_style="Body2",
+                    halign="right",
+                    theme_text_color="Primary"
+                )
+                
+                # Visual progress bar
+                progress_bg = MDBoxLayout(
+                    size_hint_y=None,
+                    height=dp(8),
+                    md_bg_color=[0.8, 0.8, 0.8, 1],
+                    radius=[dp(4), dp(4), dp(4), dp(4)]
+                )
+                
+                progress_fill = MDBoxLayout(
+                    size_hint_x=score/100,
+                    size_hint_y=1,
+                    md_bg_color=[0.2, 0.6, 0.8, 1],
+                    radius=[dp(4), dp(4), dp(4), dp(4)]
+                )
+                
+                progress_bg.add_widget(progress_fill)
+                bar_layout.add_widget(score_label)
+                bar_layout.add_widget(progress_bg)
+                
+                influence_item.add_widget(text_layout)
+                influence_item.add_widget(bar_layout)
+                
+                # Wrap in a card
+                entity_card = MDCard(
+                    orientation="vertical",
+                    padding=dp(5),
+                    size_hint_y=None,
+                    height=dp(70),
+                    elevation=1
+                )
+                entity_card.add_widget(influence_item)
+                self.results_layout.add_widget(entity_card)
+        
+        # Network Statistics
+        summary = analysis.get('summary', {})
+        if summary:
+            stats_header = OneLineListItem(text="📊 Network Statistics")
+            self.results_layout.add_widget(stats_header)
+            
+            stats_card = MDCard(
+                orientation="horizontal",
+                padding=dp(15),
+                spacing=dp(20),
+                size_hint_y=None,
+                height=dp(80),
+                elevation=1
+            )
+            
+            stats = [
+                (f"👥 {summary.get('entity_count', 0)}", "Entities"),
+                (f"🔗 {summary.get('relationship_count', 0)}", "Relationships"),
+                (f"🌐 {summary.get('connected_components', 1)}", "Components"),
+                (f"📈 {summary.get('network_density', 0):.3f}", "Density")
+            ]
+            
+            for value, label in stats:
+                stat_item = MDBoxLayout(orientation="vertical")
+                value_label = MDLabel(
+                    text=value,
+                    font_style="H6",
+                    halign="center",
+                    theme_text_color="Primary"
+                )
+                label_label = MDLabel(
+                    text=label,
+                    font_style="Caption",
+                    halign="center",
+                    theme_text_color="Secondary"
+                )
+                stat_item.add_widget(value_label)
+                stat_item.add_widget(label_label)
+                stats_card.add_widget(stat_item)
+            
+            self.results_layout.add_widget(stats_card)
+        
+        # Key findings
+        if analysis.get('key_findings'):
+            findings_header = OneLineListItem(text="🔍 Key Findings")
+            self.results_layout.add_widget(findings_header)
+            
+            for finding in analysis['key_findings'][:3]:
+                finding_item = OneLineIconListItem(
+                    text=f"• {finding}",
+                    icon="check"
+                )
+                self.results_layout.add_widget(finding_item)
+    
+    def show_network_visualization(self, instance=None):
+        """Show interactive network visualization"""
+        if not hasattr(self, 'current_analysis') or not self.current_analysis:
+            self.show_message("Run an analysis first to see the network")
+            return
+        
+        # Create visualization dialog
+        content = MDBoxLayout(orientation='vertical', size_hint_y=None)
+        content.height = 500
+        
+        # Create network graph
+        entities = self.current_analysis.get('influence_rankings', [])
+        relationships = self.current_analysis.get('relationships', [])
+        
+        if entities and relationships:
+            network_widget = NetworkGraphWidget(entities, relationships)
+            network_widget.size_hint = (1, 0.8)
+            content.add_widget(network_widget)
+        else:
+            # Fallback: show entity distribution
+            viz_label = MDLabel(
+                text="🌐 Power Network Structure",
+                font_style="H6",
+                halign="center",
+                size_hint_y=None,
+                height=40
+            )
+            content.add_widget(viz_label)
+            
+            # Show entity type distribution
+            type_layout = MDBoxLayout(orientation='horizontal', adaptive_height=True, padding=20)
+            
+            type_counts = {}
+            for entity in entities:
+                entity_type = entity.get('type', 'unknown')
+                type_counts[entity_type] = type_counts.get(entity_type, 0) + 1
+            
+            for entity_type, count in type_counts.items():
+                type_card = MDCard(
+                    orientation='vertical',
+                    padding=15,
+                    size_hint_x=None,
+                    width=100,
+                    elevation=2
+                )
+                
+                type_label = MDLabel(
+                    text=entity_type.title(),
+                    font_style="Body2",
+                    halign="center"
+                )
+                count_label = MDLabel(
+                    text=str(count),
+                    font_style="H5", 
+                    halign="center",
+                    theme_text_color="Primary"
+                )
+                
+                type_card.add_widget(count_label)
+                type_card.add_widget(type_label)
+                type_layout.add_widget(type_card)
+            
+            content.add_widget(type_layout)
+        
+        viz_dialog = MDDialog(
+            title="Network Visualization",
+            type="custom",
+            content_cls=content,
+            size_hint=(0.9, 0.8),
+            buttons=[
+                MDFlatButton(
+                    text="Close",
+                    theme_text_color="Custom",
+                    text_color=[0.5, 0.5, 0.5, 1],
+                    on_release=lambda x: viz_dialog.dismiss()
+                ),
+            ],
+        )
+        viz_dialog.open()
+    
+    def set_analysis_type(self, button, analysis_type):
+        """Set the active analysis type"""
+        # Reset all buttons
+        for btn in self.analysis_buttons:
+            btn.md_bg_color = [1, 1, 1, 0]  # Transparent background
+            btn.text_color = [0.5, 0.5, 0.5, 1]
+            btn.line_color = [0.8, 0.8, 0.8, 1]
+        
+        # Set active button
+        button.md_bg_color = [0.2, 0.6, 0.8, 1]
+        button.text_color = [1, 1, 1, 1]
+        button.line_color = [0.2, 0.6, 0.8, 1]
+        self.active_analysis_type = analysis_type
+        self.top_bar.title = f"{analysis_type} Analysis"
+    
+    def set_news_category(self, button, category):
+        """Set the active news category"""
+        # Reset all category buttons
+        for btn in self.category_buttons:
+            btn.text_color = [0.5, 0.5, 0.5, 1]
+            btn.line_color = [0.8, 0.8, 0.8, 1]
+        
+        # Set active category button
+        button.text_color = [0.2, 0.6, 0.8, 1]
+        button.line_color = [0.2, 0.6, 0.8, 1]
+        self.active_news_category = category.lower() if category != "All" else None
+    
+    def update_progress(self, value, status):
+        """Update progress with animation"""
+        self.progress_value = value
+        self.status_text = status
+        self.status_label.text = status
+    
+    def load_sample_data(self, instance=None):
+        """Load sample data with enhanced UX"""
+        self.url_input.text = "technology sector influence"
+        self.analyze_article(None)
+    
     def _create_entities_from_query(self, query):
         """Create basic entities from search query when no entities are found"""
         entities = []
@@ -1011,102 +1349,6 @@ class AnalysisScreen(MDScreen):
         
         self.show_message("Analysis failed - please try again")
     
-    def update_progress(self, value, status):
-        """Update progress with animation"""
-        self.progress_value = value
-        self.status_text = status
-        self.status_label.text = status
-    
-    def load_sample_data(self, instance=None):
-        """Load sample data with enhanced UX"""
-        self.url_input.text = "technology sector influence"
-        self.analyze_article(None)
-    
-
-    def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data", 
-                            original_url=None, extracted_topic=None):
-        """Display beautiful analysis results with URL context"""
-        
-        # Safely extract source information
-        source_name = "Unknown"
-        try:
-            source_data = article.get('source', {})
-            if isinstance(source_data, dict):
-                source_name = source_data.get('name', 'Unknown')
-            else:
-                source_name = str(source_data)
-        except:
-            source_name = "Unknown"
-        
-        # Show URL context if this was a URL analysis
-        if original_url and extracted_topic:
-            url_info_item = TwoLineListItem(
-                text="🔗 URL Analysis",
-                secondary_text=f"From: {original_url[:60]}...",
-                bg_color=[0.9, 0.95, 1.0, 1]  # Light blue background for URL context
-            )
-            self.results_layout.add_widget(url_info_item)
-            
-            topic_item = TwoLineListItem(
-                text="📋 Extracted Topic",
-                secondary_text=extracted_topic,
-                bg_color=[0.95, 0.98, 1.0, 1]  # Very light blue
-            )
-            self.results_layout.add_widget(topic_item)
-        
-        # Article header with API status
-        article_item = TwoLineListItem(
-            text=article.get('title', 'Analysis Results'),
-            secondary_text=f"Source: {source_name} | {api_status}",
-            bg_color=[0.95, 0.95, 0.98, 1]
-        )
-        self.results_layout.add_widget(article_item)
-        
-        # Show how to get real data if using mock
-        if "Mock" in api_status:
-            help_item = OneLineListItem(
-                text="💡 Set NEWS_API_KEY environment variable for real news data",
-                bg_color=[1, 0.9, 0.9, 1]
-            )
-            self.results_layout.add_widget(help_item)
-        
-        # Debug info (can be removed later)
-        debug_item = TwoLineListItem(
-            text="🔧 Analysis Details",
-            secondary_text=f"Processed {analysis['summary']['entity_count']} entities, {analysis['summary']['relationship_count']} relationships"
-        )
-        self.results_layout.add_widget(debug_item)
-        
-        # Summary card
-        summary_item = TwoLineListItem(
-            text="Network Summary",
-            secondary_text=f"{analysis['summary']['entity_count']} entities • {analysis['summary']['relationship_count']} relationships • Density: {analysis['summary']['network_density']:.3f}"
-        )
-        self.results_layout.add_widget(summary_item)
-        
-        # Top influencers
-        if analysis['influence_rankings']:
-            influencers_header = OneLineListItem(text="🏆 Most Influential Entities")
-            self.results_layout.add_widget(influencers_header)
-            
-            for i, entity in enumerate(analysis['influence_rankings'][:5]):
-                score = entity.get('influence_score', 0)
-                entity_type = entity.get('type', 'Entity').title()
-                influencer_item = TwoLineListItem(
-                    text=f"{i+1}. {entity['name']}",
-                    secondary_text=f"Influence: {score:.1f} • Type: {entity_type}"
-                )
-                self.results_layout.add_widget(influencer_item)
-        
-        # Key findings
-        if analysis.get('key_findings'):
-            findings_header = OneLineListItem(text="🔍 Key Findings")
-            self.results_layout.add_widget(findings_header)
-            
-            for finding in analysis['key_findings'][:3]:
-                finding_item = OneLineListItem(text=f"• {finding}")
-                self.results_layout.add_widget(finding_item)
-
     def show_message(self, message):
         """Show a message to the user"""
         # Simple message display
@@ -1153,6 +1395,7 @@ class AnalysisScreen(MDScreen):
         )
         settings_dialog.open()
 
+
 class KrystalApp(MDApp):
     """Modern KivyMD application with enhanced UX"""
     
@@ -1189,6 +1432,7 @@ class KrystalApp(MDApp):
         else:
             print("ℹ️  Using mock news data. Set NEWS_API_KEY for real news.")
 
+
 def main():
     """Main entry point"""
     try:
@@ -1197,6 +1441,7 @@ def main():
         print(f"❌ App error: {e}")
         import traceback
         traceback.print_exc()
+
 
 if __name__ == '__main__':
     main()
