@@ -21,166 +21,187 @@ except ImportError:
 
 
 class LittleSisClient:
-    def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv('LITTLESIS_API_KEY')
+    def __init__(self):
         self.base_url = "https://api.littlesis.org"
         self.session = requests.Session()
-        self.rate_limit_delay = 0.1  # seconds between API calls
-        
-        if self.api_key:
-            self.session.headers.update({'Authorization': f'Bearer {self.api_key}'})
-        else:
-            print("⚠️  LittleSis API key not found. Using enhanced mock data.")
-    
-    def is_api_available(self) -> bool:
-        """Check if LittleSis API is properly configured"""
-        return bool(self.api_key)
+        self.rate_limit_delay = 0.5  # Be respectful with API calls
+        self.session.headers.update({
+            'User-Agent': 'Krystal Power Mapper/1.0',
+            'Accept': 'application/json'
+        })
+        print("✅ LittleSis client initialized (public API - no key required)")
     
     def search_entities(self, query: str, page: int = 1, per_page: int = 20) -> List[Dict]:
-        """Search for entities by name in LittleSis with real API integration"""
+        """Search for entities by name in LittleSis using real API"""
         try:
-            if self.is_api_available():
-                params = {
-                    'q': query,
-                    'page': page,
-                    'per_page': per_page
-                }
-                
-                response = self.session.get(f"{self.base_url}/entities", params=params, timeout=10)
-                response.raise_for_status()
-                
-                data = response.json()
-                entities = data.get('data', [])
-                
-                # Format entities to our expected structure
-                formatted_entities = []
-                for entity in entities:
-                    formatted_entity = {
-                        "id": entity.get('id'),
-                        "name": entity.get('name', 'Unknown'),
-                        "type": entity.get('type', 'Entity').lower(),
-                        "description": entity.get('description', ''),
-                        "influence_score": self._calculate_influence_score(entity),
-                        "website": entity.get('website', ''),
-                        "sector": entity.get('sector', ''),
-                        "founded_year": entity.get('founded_year')
+            params = {
+                'q': query,
+                'page': page,
+                'per_page': per_page
+            }
+            
+            print(f"🔍 Searching LittleSis for: '{query}'")
+            response = self.session.get(f"{self.base_url}/entities", params=params, timeout=15)
+            response.raise_for_status()
+            
+            data = response.json()
+            entities = data.get('data', [])
+            
+            # Format entities to our expected structure
+            formatted_entities = []
+            for entity in entities:
+                attributes = entity.get('attributes', {})
+                formatted_entity = {
+                    "id": entity.get('id'),
+                    "name": attributes.get('name', 'Unknown'),
+                    "type": self._normalize_entity_type(attributes.get('primary_type', 'Entity')),
+                    "description": attributes.get('blurb', ''),
+                    "influence_score": self._calculate_influence_score(attributes),
+                    "website": attributes.get('website', ''),
+                    "sector": attributes.get('sector', ''),
+                    "founded_year": attributes.get('start_date')[:4] if attributes.get('start_date') else None,
+                    "metadata": {
+                        "summary": attributes.get('summary', ''),
+                        "website": attributes.get('website', ''),
+                        "parent_id": attributes.get('parent_id'),
+                        "created_at": attributes.get('created_at'),
+                        "updated_at": attributes.get('updated_at')
                     }
-                    formatted_entities.append(formatted_entity)
-                
-                print(f"✅ Found {len(formatted_entities)} real entities from LittleSis")
-                return formatted_entities
-            else:
-                # Enhanced mock data when API not available
-                return self._get_enhanced_mock_entities(query, per_page)
-                
+                }
+                formatted_entities.append(formatted_entity)
+            
+            print(f"✅ Found {len(formatted_entities)} entities from LittleSis")
+            time.sleep(self.rate_limit_delay)  # Be nice to the API
+            return formatted_entities
+            
         except requests.exceptions.RequestException as e:
             print(f"❌ LittleSis API request failed: {e}")
-            return self._get_enhanced_mock_entities(query, per_page)
+            return self._get_fallback_entities(query, per_page)
         except Exception as e:
             print(f"❌ Error searching LittleSis: {e}")
-            return self._get_enhanced_mock_entities(query, per_page)
+            return self._get_fallback_entities(query, per_page)
     
     def get_entity_connections(self, entity_id: int, relationship_types: List[str] = None, max_connections: int = 20) -> List[Dict]:
-        """Fetch connections for a given entity from LittleSis with real API integration"""
+        """Fetch connections for a given entity from LittleSis using real API"""
         try:
-            # Ensure entity_id is integer for API calls
-            if isinstance(entity_id, str) and entity_id.isdigit():
-                entity_id = int(entity_id)
+            # Ensure entity_id is properly formatted
+            if isinstance(entity_id, str):
+                if entity_id.isdigit():
+                    entity_id = int(entity_id)
+                else:
+                    print(f"⚠️  Invalid entity ID format: {entity_id}")
+                    return []
             
-            if self.is_api_available():
-                url = f"{self.base_url}/entity/{entity_id}/relationships"
-                response = self.session.get(url, timeout=10)
-                response.raise_for_status()
+            print(f"🔗 Fetching connections for entity ID: {entity_id}")
+            url = f"{self.base_url}/entity/{entity_id}/relationships"
+            response = self.session.get(url, timeout=15)
+            response.raise_for_status()
+            
+            data = response.json()
+            relationships = data.get('data', [])
+            
+            # Format relationships to our expected structure
+            formatted_connections = []
+            for rel in relationships[:max_connections]:
+                attributes = rel.get('attributes', {})
+                related_entities = rel.get('relationships', {}).get('related_entities', {}).get('data', [])
                 
-                data = response.json()
-                connections = data.get('data', [])
-                
-                # Format connections to our expected structure
-                formatted_connections = []
-                for conn in connections[:max_connections]:
-                    # Determine which entity is the target (not the one we queried)
-                    entity1 = conn.get('entity1', {})
-                    entity2 = conn.get('entity2', {})
+                if len(related_entities) >= 2:
+                    entity1 = related_entities[0]
+                    entity2 = related_entities[1]
                     
-                    if entity1.get('id') == entity_id:
+                    # Determine which entity is the target (not the one we queried)
+                    if str(entity1.get('id')) == str(entity_id):
                         target_entity = entity2
                     else:
                         target_entity = entity1
                     
                     formatted_conn = {
-                        "id": conn.get('id'),
+                        "id": rel.get('id'),
                         "entity1_id": entity1.get('id'),
                         "entity2_id": entity2.get('id'),
-                        "entity2_name": target_entity.get('name', 'Unknown'),
-                        "relationship_type": conn.get('relationship_type', 'connected_to'),
-                        "description": conn.get('description', ''),
-                        "strength": self._calculate_relationship_strength(conn),
-                        "start_date": conn.get('start_date'),
-                        "end_date": conn.get('end_date')
+                        "entity2_name": target_entity.get('attributes', {}).get('name', 'Unknown'),
+                        "relationship_type": attributes.get('description1', 'connected_to'),
+                        "description": attributes.get('description', ''),
+                        "strength": self._calculate_relationship_strength(attributes),
+                        "start_date": attributes.get('start_date'),
+                        "end_date": attributes.get('end_date'),
+                        "is_current": attributes.get('is_current', True),
+                        "metadata": {
+                            "amount": attributes.get('amount'),
+                            "goods": attributes.get('goods'),
+                            "notes": attributes.get('notes')
+                        }
                     }
                     
                     # Filter by relationship type if specified
                     if not relationship_types or formatted_conn['relationship_type'] in relationship_types:
                         formatted_connections.append(formatted_conn)
-                
-                print(f"✅ Found {len(formatted_connections)} real connections for entity {entity_id}")
-                return formatted_connections
-            else:
-                # Enhanced mock data
-                return self._get_enhanced_mock_connections(entity_id, max_connections)
-                
+            
+            print(f"✅ Found {len(formatted_connections)} connections for entity {entity_id}")
+            time.sleep(self.rate_limit_delay)  # Be nice to the API
+            return formatted_connections
+            
         except requests.exceptions.RequestException as e:
             print(f"❌ LittleSis connections API failed: {e}")
-            return self._get_enhanced_mock_connections(entity_id, max_connections)
+            return self._get_fallback_connections(entity_id, max_connections)
         except Exception as e:
             print(f"❌ Error fetching entity connections: {e}")
-            return self._get_enhanced_mock_connections(entity_id, max_connections)
+            return self._get_fallback_connections(entity_id, max_connections)
     
     def get_entity_details(self, entity_id: int) -> Optional[Dict]:
-        """Get detailed information about a specific entity with real API integration"""
+        """Get detailed information about a specific entity using real API"""
         try:
             if isinstance(entity_id, str) and entity_id.isdigit():
                 entity_id = int(entity_id)
                 
-            if self.is_api_available():
-                response = self.session.get(f"{self.base_url}/entity/{entity_id}", timeout=10)
-                response.raise_for_status()
-                
-                data = response.json()
-                entity = data.get('data', {})
-                
-                detailed_entity = {
-                    "id": entity.get('id'),
-                    "name": entity.get('name', 'Unknown'),
-                    "type": entity.get('type', 'Entity').lower(),
-                    "description": entity.get('description', ''),
-                    "website": entity.get('website', ''),
-                    "influence_score": self._calculate_influence_score(entity),
-                    "sector": entity.get('sector', ''),
-                    "founded_year": entity.get('founded_year'),
-                    "address": entity.get('address', ''),
-                    "phone": entity.get('phone', ''),
-                    "email": entity.get('email', ''),
-                    "metadata": entity.get('metadata', {})
+            print(f"📋 Fetching details for entity ID: {entity_id}")
+            response = self.session.get(f"{self.base_url}/entity/{entity_id}", timeout=15)
+            response.raise_for_status()
+            
+            data = response.json()
+            entity_data = data.get('data', {})
+            attributes = entity_data.get('attributes', {})
+            
+            detailed_entity = {
+                "id": entity_data.get('id'),
+                "name": attributes.get('name', 'Unknown'),
+                "type": self._normalize_entity_type(attributes.get('primary_type', 'Entity')),
+                "description": attributes.get('blurb', ''),
+                "website": attributes.get('website', ''),
+                "influence_score": self._calculate_influence_score(attributes),
+                "sector": attributes.get('sector', ''),
+                "founded_year": attributes.get('start_date')[:4] if attributes.get('start_date') else None,
+                "address": attributes.get('address', ''),
+                "phone": attributes.get('phone', ''),
+                "email": attributes.get('email', ''),
+                "metadata": {
+                    "summary": attributes.get('summary', ''),
+                    "website": attributes.get('website', ''),
+                    "parent_id": attributes.get('parent_id'),
+                    "created_at": attributes.get('created_at'),
+                    "updated_at": attributes.get('updated_at'),
+                    "aliases": attributes.get('aliases', []),
+                    "external_links": attributes.get('external_links', [])
                 }
-                
-                return detailed_entity
-            else:
-                return self._get_enhanced_mock_entity_details(entity_id)
+            }
+            
+            time.sleep(self.rate_limit_delay)  # Be nice to the API
+            return detailed_entity
                 
         except Exception as e:
             print(f"❌ Error fetching entity details: {e}")
-            return self._get_enhanced_mock_entity_details(entity_id)
+            return self._get_fallback_entity_details(entity_id)
     
     def get_entity_relationships(self, entity_id: int, direction: str = "both") -> List[Dict]:
-        """Get relationships with more control over direction (outgoing, incoming, both)"""
+        """Get relationships with more control over direction"""
         try:
             connections = self.get_entity_connections(entity_id)
             
             if direction == "outgoing":
-                return [conn for conn in connections if conn.get('entity1_id') == entity_id]
+                return [conn for conn in connections if str(conn.get('entity1_id')) == str(entity_id)]
             elif direction == "incoming":
-                return [conn for conn in connections if conn.get('entity2_id') == entity_id]
+                return [conn for conn in connections if str(conn.get('entity2_id')) == str(entity_id)]
             else:  # both
                 return connections
                 
@@ -193,26 +214,43 @@ class LittleSisClient:
         try:
             connections = self.get_entity_connections(entity1_id)
             return [conn for conn in connections 
-                   if conn.get('entity2_id') == entity2_id or conn.get('entity1_id') == entity2_id]
+                   if str(conn.get('entity2_id')) == str(entity2_id) or 
+                      str(conn.get('entity1_id')) == str(entity2_id)]
         except Exception as e:
             print(f"Error searching relationships: {e}")
             return []
     
+    def is_api_available(self) -> bool:
+        """LittleSis API is always available (public API)"""
+        return True
+    
+    def _normalize_entity_type(self, entity_type: str) -> str:
+        """Normalize entity types to our standard categories"""
+        type_mapping = {
+            'Person': 'person',
+            'Org': 'organization',
+            'Business': 'corporation',
+            'Government': 'government',
+            'PoliticalFundraising': 'organization',
+            'Public': 'organization'
+        }
+        return type_mapping.get(entity_type, entity_type.lower())
+    
     def _calculate_influence_score(self, entity_data: Dict) -> float:
-        """Calculate a rough influence score based on entity data"""
-        score = 50.0  # Base score
+        """Calculate influence score based on entity data"""
+        base_score = 50.0
         
         # Adjust based on entity type
-        entity_type = entity_data.get('type', '').lower()
+        entity_type = entity_data.get('primary_type', '').lower()
         type_multipliers = {
-            'corporation': 1.3,
-            'government': 1.4,
             'person': 1.2,
-            'organization': 1.1
+            'org': 1.3,
+            'business': 1.4,
+            'government': 1.5
         }
         
         multiplier = type_multipliers.get(entity_type, 1.0)
-        score *= multiplier
+        score = base_score * multiplier
         
         # Cap at 100
         return min(score, 100.0)
@@ -221,178 +259,86 @@ class LittleSisClient:
         """Calculate relationship strength based on relationship data"""
         base_strength = 0.5
         
-        # Adjust based on relationship type
-        rel_type = relationship_data.get('relationship_type', '').lower()
+        # Adjust based on relationship type and details
+        rel_description = relationship_data.get('description1', '').lower()
+        
         strength_boosters = {
-            'board_member': 0.3,
-            'ownership': 0.4,
+            'board': 0.3,
+            'director': 0.3,
             'executive': 0.35,
-            'donation': 0.25,
-            'lobbying': 0.3,
-            'family': 0.4
+            'owner': 0.4,
+            'founder': 0.4,
+            'donor': 0.25,
+            'lobby': 0.3,
+            'family': 0.4,
+            'member': 0.2
         }
         
-        boost = strength_boosters.get(rel_type, 0.1)
+        # Find matching booster
+        boost = 0.1
+        for key, value in strength_boosters.items():
+            if key in rel_description:
+                boost = value
+                break
+        
         return min(base_strength + boost, 1.0)
     
-    def _get_enhanced_mock_entities(self, query: str, count: int) -> List[Dict]:
-        """Enhanced mock entities with more realistic data"""
-        mock_entities = [
+    def _get_fallback_entities(self, query: str, count: int) -> List[Dict]:
+        """Fallback entities when API fails"""
+        print("⚠️  Using fallback entity data (API temporarily unavailable)")
+        return [
             {
-                "id": 1,
-                "name": f"{query} Corporation",
-                "type": "corporation",
-                "description": f"Major multinational corporation focused on {query}",
-                "influence_score": 85,
-                "website": f"https://{query.lower()}-corp.com",
-                "sector": "Technology",
-                "founded_year": 1995
-            },
-            {
-                "id": 2, 
-                "name": f"{query} Foundation",
-                "type": "organization",
-                "description": f"Non-profit organization supporting {query} initiatives",
-                "influence_score": 65,
-                "website": f"https://{query.lower()}-foundation.org",
-                "sector": "Philanthropy",
-                "founded_year": 2005
-            },
-            {
-                "id": 3,
-                "name": f"{query} Government Official",
-                "type": "person",
-                "description": f"Influential government figure involved with {query} policy",
-                "influence_score": 78,
-                "website": "",
-                "sector": "Government",
-                "founded_year": None
-            },
-            {
-                "id": 4,
-                "name": f"{query} Industry Association",
-                "type": "organization", 
-                "description": f"Trade association representing {query} industry interests",
-                "influence_score": 72,
-                "website": f"https://{query.lower()}-association.org",
-                "sector": "Advocacy",
-                "founded_year": 1990
-            },
-            {
-                "id": 5,
-                "name": f"{query} Research Institute",
-                "type": "organization",
-                "description": f"Think tank conducting research on {query} topics",
-                "influence_score": 68,
-                "website": f"https://{query.lower()}-research.edu",
-                "sector": "Education",
-                "founded_year": 1985
+                "id": i + 1,
+                "name": f"{query} Entity {i + 1}",
+                "type": ["corporation", "organization", "person", "government"][i % 4],
+                "description": f"Fallback entity for {query}",
+                "influence_score": 60 + (i * 10) % 40,
+                "website": f"https://example.com/entity{i + 1}",
+                "sector": ["Technology", "Finance", "Energy", "Healthcare"][i % 4],
+                "founded_year": 1980 + (i * 5) % 40,
+                "metadata": {}
             }
+            for i in range(min(count, 5))
         ]
-        
-        return mock_entities[:count]
     
-    def _get_enhanced_mock_connections(self, entity_id: int, max_connections: int) -> List[Dict]:
-        """Enhanced mock connections with more realistic relationship data"""
-        # Different connection sets based on entity type patterns
-        if entity_id % 3 == 0:  # Person type
-            connections = [
-                {
-                    "id": entity_id * 100 + 1,
-                    "entity1_id": entity_id,
-                    "entity2_id": entity_id + 100,
-                    "entity2_name": "Corporate Board",
-                    "relationship_type": "board_member",
-                    "description": "Serves as board member",
-                    "strength": 0.8,
-                    "start_date": "2020-01-15"
-                },
-                {
-                    "id": entity_id * 100 + 2,
-                    "entity1_id": entity_id, 
-                    "entity2_id": entity_id + 200,
-                    "entity2_name": "Political Campaign",
-                    "relationship_type": "donation",
-                    "description": "Major campaign donor",
-                    "strength": 0.6,
-                    "start_date": "2022-03-10"
-                }
-            ]
-        elif entity_id % 3 == 1:  # Corporation type
-            connections = [
-                {
-                    "id": entity_id * 100 + 1,
-                    "entity1_id": entity_id,
-                    "entity2_id": entity_id + 300,
-                    "entity2_name": "Industry Association",
-                    "relationship_type": "membership",
-                    "description": "Executive committee member",
-                    "strength": 0.7,
-                    "start_date": "2018-05-20"
-                },
-                {
-                    "id": entity_id * 100 + 2,
-                    "entity1_id": entity_id,
-                    "entity2_id": entity_id + 400,
-                    "entity2_name": "Government Agency",
-                    "relationship_type": "lobbying",
-                    "description": "Registered lobbying activities",
-                    "strength": 0.9,
-                    "start_date": "2021-11-05"
-                }
-            ]
-        else:  # Organization type
-            connections = [
-                {
-                    "id": entity_id * 100 + 1,
-                    "entity1_id": entity_id,
-                    "entity2_id": entity_id + 500,
-                    "entity2_name": "Research Partner",
-                    "relationship_type": "partnership",
-                    "description": "Research and development partnership",
-                    "strength": 0.6,
-                    "start_date": "2019-07-12"
-                },
-                {
-                    "id": entity_id * 100 + 2,
-                    "entity1_id": entity_id,
-                    "entity2_id": entity_id + 600,
-                    "entity2_name": "Government Department",
-                    "relationship_type": "advisory",
-                    "description": "Provides expert advisory services",
-                    "strength": 0.75,
-                    "start_date": "2020-09-18"
-                }
-            ]
-        
-        return connections[:max_connections]
+    def _get_fallback_connections(self, entity_id: int, max_connections: int) -> List[Dict]:
+        """Fallback connections when API fails"""
+        print("⚠️  Using fallback connection data (API temporarily unavailable)")
+        return [
+            {
+                "id": entity_id * 100 + i,
+                "entity1_id": entity_id,
+                "entity2_id": entity_id + i + 100,
+                "entity2_name": f"Connected Entity {i + 1}",
+                "relationship_type": ["board_member", "executive", "donor", "partner"][i % 4],
+                "description": f"Fallback relationship {i + 1}",
+                "strength": 0.5 + (i * 0.1),
+                "start_date": None,
+                "end_date": None,
+                "is_current": True,
+                "metadata": {}
+            }
+            for i in range(min(max_connections, 3))
+        ]
     
-    def _get_enhanced_mock_entity_details(self, entity_id: int) -> Dict:
-        """Enhanced mock entity details"""
-        entity_types = ['corporation', 'organization', 'person', 'government']
-        entity_type = entity_types[entity_id % len(entity_types)]
-        
-        details = {
+    def _get_fallback_entity_details(self, entity_id: int) -> Dict:
+        """Fallback entity details when API fails"""
+        return {
             "id": entity_id,
             "name": f"Entity {entity_id}",
-            "type": entity_type,
-            "description": f"A detailed description of {entity_type} entity {entity_id}",
-            "website": f"https://entity{entity_id}.com",
-            "influence_score": 60 + (entity_id * 5) % 40,
-            "sector": ["Technology", "Finance", "Healthcare", "Energy"][entity_id % 4],
-            "founded_year": 1980 + (entity_id * 3) % 40,
-            "address": f"{entity_id} Main Street, City, State",
-            "phone": f"+1-555-{entity_id:04d}",
-            "email": f"info@entity{entity_id}.com",
-            "metadata": {
-                "employee_count": 1000 + (entity_id * 100) % 9000,
-                "revenue": f"${(entity_id * 1000000) % 1000000000:,}",
-                "last_updated": datetime.now().isoformat()
-            }
+            "type": "organization",
+            "description": "Fallback entity details (API temporarily unavailable)",
+            "website": f"https://example.com/entity{entity_id}",
+            "influence_score": 65,
+            "sector": "Various",
+            "founded_year": 2000,
+            "address": "Unknown",
+            "phone": "Unknown",
+            "email": "Unknown",
+            "metadata": {}
         }
-        
-        return details
-    
+
+
 class NewsClient:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv('NEWS_API_KEY')
@@ -627,6 +573,7 @@ class NewsClient:
         """Check if real NewsAPI is available"""
         return self.use_real_api
 
+
 class OpenSecretsClient:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv('OPENSECRETS_API_KEY')
@@ -654,12 +601,13 @@ class OpenSecretsClient:
             "total_lobbying": 1500000,
             "total_contributions": 800000
         }
-    
+
+
 # Utility function to initialize all data sources
 def create_data_sources(news_api_key: str = None, opensecrets_api_key: str = None) -> Dict:
     """Convenience function to create all data source clients"""
     return {
         'news': NewsClient(news_api_key),
-        'littlesis': LittleSisClient(),  # No API key needed
+        'littlesis': LittleSisClient(),  # No API key needed - public API
         'opensecrets': OpenSecretsClient(opensecrets_api_key)
     }
