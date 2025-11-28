@@ -11,6 +11,7 @@ from kivy.metrics import dp
 from kivy.properties import StringProperty, NumericProperty, ListProperty, BooleanProperty
 from kivy.animation import Animation
 from kivy.uix.modalview import ModalView
+from kivy.uix.image import Image
 
 # KivyMD Components
 from kivymd.app import MDApp
@@ -34,6 +35,67 @@ from kivymd.uix.slider import MDSlider
 # Core functionality
 from krystal.power_mapper import PowerMapper, create_sample_network
 from krystal.data_sources import LittleSisClient, NewsClient
+
+
+class IconButton(MDRaisedButton):
+    """Enhanced button with icon support and better animations"""
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.animation = None
+    
+    def on_press(self):
+        """Add press animation"""
+        if self.animation:
+            self.animation.cancel(self)
+        
+        self.animation = Animation(
+            md_bg_color=[c * 0.8 for c in self.md_bg_color[:3]] + [1],
+            duration=0.1
+        )
+        self.animation.start(self)
+        
+        # Call original press handler
+        super().on_press()
+    
+    def on_release(self):
+        """Add release animation"""
+        if self.animation:
+            self.animation.cancel(self)
+        
+        self.animation = Animation(
+            md_bg_color=self.theme_cls.primary_color,
+            duration=0.2
+        )
+        self.animation.start(self)
+        
+        # Call original release handler
+        super().on_release()
+
+
+class CategoryButton(MDRoundFlatButton):
+    """Specialized button for category selection with better visual feedback"""
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.is_active = False
+    
+    def set_active(self, active):
+        """Toggle active state with animation"""
+        self.is_active = active
+        if active:
+            anim = Animation(
+                md_bg_color=[0.2, 0.6, 0.8, 1],
+                text_color=[1, 1, 1, 1],
+                duration=0.3
+            )
+        else:
+            anim = Animation(
+                md_bg_color=[1, 1, 1, 0],
+                text_color=[0.5, 0.5, 0.5, 1],
+                duration=0.3
+            )
+        anim.start(self)
 
 
 class WelcomeScreen(MDScreen):
@@ -60,9 +122,9 @@ class WelcomeScreen(MDScreen):
             size_hint_y=0.4
         )
         
-        # App icon
+        # App icon with better styling
         self.icon_label = MDLabel(
-            text="🔍",
+            text="🔍",  # Can be replaced with actual image
             font_style="H2",
             theme_text_color="Custom",
             text_color=[0.2, 0.5, 0.8, 1],
@@ -139,15 +201,16 @@ class WelcomeScreen(MDScreen):
         features_card.add_widget(features_title)
         features_card.add_widget(features_list)
         
-        # Action buttons
+        # Action buttons with enhanced functionality
         action_layout = MDBoxLayout(
             orientation="vertical",
             spacing=dp(15),
             size_hint_y=0.2
         )
         
-        self.start_button = MDRaisedButton(
+        self.start_button = IconButton(
             text="Start Analysis",
+            icon="rocket-launch",  # Material Design icon
             size_hint_y=None,
             height=dp(50),
             md_bg_color=[0.2, 0.6, 0.8, 1],
@@ -157,6 +220,7 @@ class WelcomeScreen(MDScreen):
         
         sample_button = MDFlatButton(
             text="Try Sample Data",
+            icon="test-tube",  # Material Design icon
             size_hint_y=None,
             height=dp(40),
             theme_text_color="Custom",
@@ -175,23 +239,41 @@ class WelcomeScreen(MDScreen):
         self.add_widget(main_layout)
     
     def start_analysis(self, instance):
-        """Navigate to analysis screen"""
-        self.manager.current = 'analysis'
+        """Navigate to analysis screen with button animation completion"""
+        # Complete button animation before transition
+        anim = Animation(
+            md_bg_color=[0.1, 0.4, 0.6, 1],
+            duration=0.2
+        )
+        anim.bind(on_complete=lambda *args: setattr(self.manager, 'current', 'analysis'))
+        anim.start(instance)
     
     def show_sample(self, instance):
-        """Show sample data preview"""
+        """Show sample data preview with enhanced dialog"""
         sample_dialog = MDDialog(
             title="Sample Analysis",
-            text="This will load a demonstration with sample power structure data showing how Krystal analyzes relationships between corporations, government entities, and influential organizations.",
+            type="custom",
+            content_cls=MDBoxLayout(
+                MDLabel(
+                    text="This will load a demonstration with sample power structure data showing how Krystal analyzes relationships between corporations, government entities, and influential organizations.",
+                    size_hint_y=None,
+                    height=dp(80)
+                ),
+                orientation="vertical",
+                spacing=dp(10),
+                adaptive_height=True
+            ),
             buttons=[
                 MDFlatButton(
                     text="Cancel",
+                    icon="close-circle",
                     theme_text_color="Custom",
                     text_color=[0.5, 0.5, 0.5, 1],
                     on_release=lambda x: sample_dialog.dismiss()
                 ),
-                MDRaisedButton(
+                IconButton(
                     text="Load Sample",
+                    icon="download",
                     md_bg_color=[0.2, 0.6, 0.8, 1],
                     on_release=lambda x: self.load_sample_data(sample_dialog)
                 ),
@@ -200,11 +282,24 @@ class WelcomeScreen(MDScreen):
         sample_dialog.open()
     
     def load_sample_data(self, dialog):
-        """Load sample data and navigate to analysis"""
+        """Load sample data and navigate to analysis with smooth transition"""
         dialog.dismiss()
+        
+        # Show loading state
+        self.start_button.disabled = True
+        self.start_button.text = "Loading Sample..."
+        
+        Clock.schedule_once(lambda dt: self._complete_sample_load(), 1.0)
+    
+    def _complete_sample_load(self):
+        """Complete sample data loading"""
         self.manager.current = 'analysis'
         analysis_screen = self.manager.get_screen('analysis')
         Clock.schedule_once(lambda dt: analysis_screen.load_sample_data(), 0.5)
+        
+        # Reset button state
+        self.start_button.disabled = False
+        self.start_button.text = "Start Analysis"
 
 
 class AnalysisScreen(MDScreen):
@@ -226,13 +321,16 @@ class AnalysisScreen(MDScreen):
         self.dialog = None
         self.active_analysis_type = "News"
         self.active_news_category = None
+        self.analysis_buttons = []
+        self.category_buttons = []
+        
         self.build_ui()
     
     def build_ui(self):
         # Main layout
         main_layout = MDBoxLayout(orientation="vertical")
         
-        # Top App Bar
+        # Top App Bar with enhanced navigation
         self.top_bar = MDTopAppBar(
             title="Power Analysis",
             elevation=4,
@@ -240,7 +338,7 @@ class AnalysisScreen(MDScreen):
             specific_text_color=[1, 1, 1, 1],
             left_action_items=[["arrow-left", lambda x: self.go_back()]],
             right_action_items=[
-                ["help", lambda x: self.show_help()],
+                ["help-circle", lambda x: self.show_help()],
                 ["cog", lambda x: self.show_settings()],
             ]
         )
@@ -249,7 +347,7 @@ class AnalysisScreen(MDScreen):
         # Content area
         content_layout = MDBoxLayout(orientation="vertical", padding=dp(20), spacing=dp(20))
         
-        # Input Card
+        # Input Card with enhanced styling
         input_card = MDCard(
             orientation="vertical",
             padding=dp(20),
@@ -272,35 +370,30 @@ class AnalysisScreen(MDScreen):
             icon_left="magnify"
         )
         
-        # Analysis type buttons
+        # Analysis type buttons with enhanced functionality
         analysis_layout = MDBoxLayout(orientation="horizontal", spacing=dp(10), adaptive_height=True)
         analysis_types = [
-            ("News", "newspaper"),
+            ("News", "newspaper-variant"),
             ("Organization", "office-building"),
             ("Person", "account"),
             ("Topic", "tag")
         ]
         
-        self.analysis_buttons = []
         for text, icon in analysis_types:
-            btn = MDRoundFlatButton(
+            btn = IconButton(
                 text=text,
                 icon=icon,
                 size_hint_x=None,
-                width=dp(120),
+                width=dp(130),
                 theme_text_color="Custom",
-                text_color=[0.5, 0.5, 0.5, 1],
-                line_color=[0.8, 0.8, 0.8, 1]
+                text_color=[1, 1, 1, 1] if text == "News" else [0.5, 0.5, 0.5, 1],
+                md_bg_color=[0.2, 0.6, 0.8, 1] if text == "News" else [0.8, 0.8, 0.8, 1]
             )
             btn.bind(on_release=lambda x, t=text: self.set_analysis_type(x, t))
             analysis_layout.add_widget(btn)
             self.analysis_buttons.append(btn)
         
-        # Set first button as active
-        if self.analysis_buttons:
-            self.set_analysis_type(self.analysis_buttons[0], "News")
-        
-        # News category selection
+        # News category selection with enhanced buttons
         category_layout = MDBoxLayout(orientation="horizontal", spacing=dp(10), adaptive_height=True)
         category_label = MDLabel(
             text="Category:",
@@ -309,35 +402,40 @@ class AnalysisScreen(MDScreen):
             size_hint_x=0.3
         )
         
-        # News categories dropdown (simplified as buttons for now)
-        self.category_buttons = []
-        categories = ["All", "Technology", "Business", "Politics", "General"]
-        
+        # News categories with specialized buttons
         category_buttons_layout = MDBoxLayout(orientation="horizontal", spacing=dp(5), adaptive_height=True)
-        for category in categories:
-            btn = MDRoundFlatButton(
+        categories = [
+            ("All", "asterisk"),
+            ("Technology", "laptop"),
+            ("Business", "briefcase"),
+            ("Politics", "gavel"),
+            ("General", "earth")
+        ]
+        
+        for category, icon in categories:
+            btn = CategoryButton(
                 text=category,
+                icon=icon,
                 size_hint_x=None,
-                width=dp(80),
+                width=dp(90),
                 theme_text_color="Custom",
-                text_color=[0.5, 0.5, 0.5, 1],
-                line_color=[0.8, 0.8, 0.8, 1]
+                text_color=[0.2, 0.6, 0.8, 1] if category == "All" else [0.5, 0.5, 0.5, 1],
+                line_color=[0.2, 0.6, 0.8, 1] if category == "All" else [0.8, 0.8, 0.8, 1]
             )
+            btn.set_active(category == "All")
             btn.bind(on_release=lambda x, c=category: self.set_news_category(x, c))
             category_buttons_layout.add_widget(btn)
             self.category_buttons.append(btn)
         
-        # Set "All" as default category
-        self.set_news_category(self.category_buttons[0], "All")
-        
         category_layout.add_widget(category_label)
         category_layout.add_widget(category_buttons_layout)
         
-        # Action buttons
+        # Action buttons with enhanced functionality
         button_layout = MDBoxLayout(orientation="horizontal", spacing=dp(15), adaptive_height=True)
         
-        self.analyze_btn = MDRaisedButton(
+        self.analyze_btn = IconButton(
             text="Start Analysis",
+            icon="magnify",
             size_hint_x=0.7,
             md_bg_color=[0.2, 0.6, 0.8, 1],
             on_release=self.analyze_article
@@ -345,6 +443,7 @@ class AnalysisScreen(MDScreen):
         
         sample_btn = MDFlatButton(
             text="Quick Sample",
+            icon="lightning-bolt",
             size_hint_x=0.3,
             theme_text_color="Custom",
             text_color=[0.5, 0.5, 0.5, 1],
@@ -361,7 +460,7 @@ class AnalysisScreen(MDScreen):
         input_card.add_widget(button_layout)
         content_layout.add_widget(input_card)
         
-        # Progress Card
+        # Progress Card with enhanced animations
         self.progress_card = MDCard(
             orientation="vertical",
             padding=dp(20),
@@ -410,41 +509,45 @@ class AnalysisScreen(MDScreen):
         self.add_widget(main_layout)
     
     def set_analysis_type(self, button, analysis_type):
-        """Set the active analysis type"""
-        # Reset all buttons
+        """Set the active analysis type with smooth transitions"""
+        # Animate all buttons to inactive state
         for btn in self.analysis_buttons:
-            btn.md_bg_color = [1, 1, 1, 0]  # Transparent background
-            btn.text_color = [0.5, 0.5, 0.5, 1]
-            btn.line_color = [0.8, 0.8, 0.8, 1]
+            if btn != button:
+                anim = Animation(
+                    md_bg_color=[0.8, 0.8, 0.8, 1],
+                    text_color=[0.5, 0.5, 0.5, 1],
+                    duration=0.3
+                )
+                anim.start(btn)
         
-        # Set active button
-        button.md_bg_color = [0.2, 0.6, 0.8, 1]
-        button.text_color = [1, 1, 1, 1]
-        button.line_color = [0.2, 0.6, 0.8, 1]
+        # Animate active button
+        active_anim = Animation(
+            md_bg_color=[0.2, 0.6, 0.8, 1],
+            text_color=[1, 1, 1, 1],
+            duration=0.3
+        )
+        active_anim.start(button)
+        
         self.active_analysis_type = analysis_type
         self.top_bar.title = f"{analysis_type} Analysis"
     
     def set_news_category(self, button, category):
-        """Set the active news category"""
-        # Reset all category buttons
+        """Set the active news category with visual feedback"""
+        # Update all category buttons
         for btn in self.category_buttons:
-            btn.text_color = [0.5, 0.5, 0.5, 1]
-            btn.line_color = [0.8, 0.8, 0.8, 1]
+            if btn == button:
+                btn.set_active(True)
+            else:
+                btn.set_active(False)
         
-        # Set active category button
-        button.text_color = [0.2, 0.6, 0.8, 1]
-        button.line_color = [0.2, 0.6, 0.8, 1]
         self.active_news_category = category.lower() if category != "All" else None
     
     def analyze_article(self, instance):
-        """Start analysis with enhanced UX"""
+        """Start analysis with enhanced UX and animations"""
         query = self.url_input.text.strip()
         if not query:
             self.show_message("Please enter a URL or search terms")
             return
-        
-        # Use category if specified
-        category = getattr(self, 'active_news_category', None)
         
         if self.is_analyzing:
             return
@@ -453,8 +556,9 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.disabled = True
         self.analyze_btn.text = "Analyzing..."
         
-        # Show progress card
-        self.progress_card.opacity = 1
+        # Show progress card with animation
+        anim = Animation(opacity=1, duration=0.5)
+        anim.start(self.progress_card)
         
         # Clear previous results
         self.results_layout.clear_widgets()
@@ -468,10 +572,10 @@ class AnalysisScreen(MDScreen):
         self.results_layout.add_widget(initial_item)
         
         # Start analysis process with category
-        Clock.schedule_once(lambda dt: self._perform_analysis(query, category), 0.5)
+        Clock.schedule_once(lambda dt: self._perform_analysis(query, self.active_news_category), 0.5)
     
     def _perform_analysis(self, query, category=None):
-        """Perform analysis with detailed progress updates"""
+        """Perform analysis with detailed progress updates and animations"""
         try:
             steps = [
                 (20, f"Searching {category if category else 'all'} news..."),
@@ -505,7 +609,7 @@ class AnalysisScreen(MDScreen):
             self._analysis_error(str(e))
     
     def _analysis_complete(self, query, category=None):
-        """Handle analysis completion with category"""
+        """Handle analysis completion with enhanced results display"""
         try:
             # Get real news data with category
             if category and category != "all":
@@ -556,19 +660,22 @@ class AnalysisScreen(MDScreen):
             self.results_layout.clear_widgets()
             self.display_analysis_results(analysis, articles[0], api_status)
             
-            # Reset UI state
+            # Reset UI state with animations
             self.is_analyzing = False
             self.analyze_btn.disabled = False
             self.analyze_btn.text = "Start Analysis"
             
-            # Hide progress card after delay
-            Clock.schedule_once(lambda dt: setattr(self.progress_card, 'opacity', 0), 2)
+            # Hide progress card after delay with animation
+            Clock.schedule_once(
+                lambda dt: Animation(opacity=0, duration=0.5).start(self.progress_card), 
+                2
+            )
             
         except Exception as e:
             self._analysis_error(str(e))
     
     def _analysis_error(self, error_msg):
-        """Handle analysis errors"""
+        """Handle analysis errors with user-friendly messaging"""
         self.is_analyzing = False
         self.analyze_btn.disabled = False
         self.analyze_btn.text = "Start Analysis"
@@ -583,7 +690,10 @@ class AnalysisScreen(MDScreen):
         self.show_message("Analysis failed - please try again")
     
     def update_progress(self, value, status):
-        """Update progress with animation"""
+        """Update progress with smooth animation"""
+        anim = Animation(value=value, duration=0.5)
+        anim.start(self.progress_bar)
+        
         self.progress_value = value
         self.status_text = status
         self.status_label.text = status
@@ -591,10 +701,12 @@ class AnalysisScreen(MDScreen):
     def load_sample_data(self, instance=None):
         """Load sample data with enhanced UX"""
         self.url_input.text = "technology sector influence"
-        self.analyze_article(None)
+        
+        # Add a small delay to show the text change
+        Clock.schedule_once(lambda dt: self.analyze_article(None), 0.3)
     
     def display_analysis_results(self, analysis, article, api_status="🔴 Mock Data"):
-        """Display beautiful analysis results with API status"""
+        """Display beautiful analysis results with enhanced visuals"""
         # Article header with API status
         article_item = TwoLineListItem(
             text=article.get('title', 'Analysis Results'),
@@ -607,7 +719,7 @@ class AnalysisScreen(MDScreen):
         if "Mock" in api_status:
             help_item = OneLineListItem(
                 text="💡 Set NEWS_API_KEY environment variable for real news data",
-                bg_color=[1, 0.9, 0.9, 1]  # Light red background for notice
+                bg_color=[1, 0.9, 0.9, 1]
             )
             self.results_layout.add_widget(help_item)
         
@@ -641,23 +753,34 @@ class AnalysisScreen(MDScreen):
     
     def show_message(self, message):
         """Show a message to the user"""
-        # Simple message display
+        # Simple message display - could be enhanced with toast notifications
         print(f"Message: {message}")
     
     def go_back(self):
-        """Return to welcome screen"""
+        """Return to welcome screen with smooth transition"""
+        self.manager.transition.direction = 'right'
         self.manager.current = 'welcome'
     
     def show_help(self):
-        """Show help dialog"""
+        """Show enhanced help dialog"""
         help_dialog = MDDialog(
             title="How to Use Krystal",
-            text="1. Enter a news URL or search terms\n2. Select analysis type\n3. Choose news category (optional)\n4. View power structure mapping\n5. Explore connections and influence scores\n\nKrystal helps you uncover hidden relationships between powerful entities in news media.",
+            type="custom",
+            content_cls=MDBoxLayout(
+                MDLabel(
+                    text="1. Enter a news URL or search terms\n2. Select analysis type\n3. Choose news category (optional)\n4. View power structure mapping\n5. Explore connections and influence scores\n\nKrystal helps you uncover hidden relationships between powerful entities in news media.",
+                    size_hint_y=None,
+                    height=dp(150)
+                ),
+                orientation="vertical",
+                spacing=dp(10),
+                adaptive_height=True
+            ),
             buttons=[
-                MDFlatButton(
+                IconButton(
                     text="Got it",
-                    theme_text_color="Custom",
-                    text_color=[0.2, 0.6, 0.8, 1],
+                    icon="check",
+                    md_bg_color=[0.2, 0.6, 0.8, 1],
                     on_release=lambda x: help_dialog.dismiss()
                 ),
             ],
@@ -665,7 +788,7 @@ class AnalysisScreen(MDScreen):
         help_dialog.open()
     
     def show_settings(self):
-        """Show settings dialog"""
+        """Show enhanced settings dialog"""
         # Check API status
         api_status = "🔴 Not configured" 
         if self.news_client.is_api_available():
@@ -673,12 +796,22 @@ class AnalysisScreen(MDScreen):
         
         settings_dialog = MDDialog(
             title="Settings & API Status",
-            text=f"News API: {api_status}\n\nTo use real news data:\n1. Get API key from newsapi.org\n2. Set NEWS_API_KEY environment variable\n3. Restart the application",
+            type="custom",
+            content_cls=MDBoxLayout(
+                MDLabel(
+                    text=f"News API: {api_status}\n\nTo use real news data:\n1. Get API key from newsapi.org\n2. Set NEWS_API_KEY environment variable\n3. Restart the application",
+                    size_hint_y=None,
+                    height=dp(120)
+                ),
+                orientation="vertical",
+                spacing=dp(10),
+                adaptive_height=True
+            ),
             buttons=[
-                MDFlatButton(
+                IconButton(
                     text="Close",
-                    theme_text_color="Custom",
-                    text_color=[0.2, 0.6, 0.8, 1],
+                    icon="close",
+                    md_bg_color=[0.5, 0.5, 0.5, 1],
                     on_release=lambda x: settings_dialog.dismiss()
                 ),
             ],
@@ -693,6 +826,7 @@ class KrystalApp(MDApp):
         super().__init__(**kwargs)
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
+        self.theme_cls.material_style = "M3"  # Use Material Design 3
     
     def build(self):
         self.title = "Krystal - Power Structure Mapper"
@@ -712,7 +846,7 @@ class KrystalApp(MDApp):
     
     def on_start(self):
         """Called when the app starts"""
-        print("🚀 Krystal app started with News API integration!")
+        print("🚀 Krystal app started with enhanced button functionality!")
         
         # Check API status on startup
         from krystal.data_sources import NewsClient
