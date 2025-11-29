@@ -297,17 +297,17 @@ class AnalysisScreen(MDScreen):
         static_content = MDBoxLayout(
             orientation="vertical",
             size_hint_y=None,
-            height="300dp",  # Reduced height since progress is separate
-            padding="16dp",
+            height="320dp",  # Reduced height since progress is separate
+            padding=["16dp", "16dp", "16dp", "8dp"],  # Less bottom padding
             spacing="16dp"
         )
         
         # Input Section
         input_layout = MDBoxLayout(
             orientation="vertical",
-            spacing="10dp",
+            spacing="12dp",
             size_hint_y=None,
-            height="260dp"
+            height="268dp"
         )
         
         input_title = MDLabel(
@@ -444,7 +444,7 @@ class AnalysisScreen(MDScreen):
         self.content_layout = MDBoxLayout(
             orientation="vertical", 
             size_hint_y=None,
-            padding="16dp",
+            padding=["16dp", "8dp", "16dp", "16dp"],  # Less top padding
             spacing="16dp",
             height="600dp"  # Initial height
         )
@@ -570,7 +570,7 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.text = "Analyzing..."
         
         # Show progress - set height and opacity
-        self.progress_layout.height = "80dp"
+        self.progress_layout.height = "90dp"  # +10dp more height
         self.progress_layout.opacity = 1
         
         self.results_container.clear_widgets()
