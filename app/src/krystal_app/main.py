@@ -585,8 +585,8 @@ class AnalysisScreen(MDScreen):
         initial_item = TwoLineListItem(text=status_text, secondary_text=secondary_text)
         self.results_container.add_widget(initial_item)
         
-        # Auto-scroll to show progress
-        self.content_scroll.scroll_y = 1.0
+        # Auto-scroll to TOP to show the progress status
+        self.content_scroll.scroll_y = 0  # Scroll to top
         
         Clock.schedule_once(lambda dt: self._perform_analysis(query, category), 0.5)
     
@@ -755,8 +755,8 @@ class AnalysisScreen(MDScreen):
         self.results_container.spacing = "12dp"
         self.results_container.padding = "8dp"
         
-        # Auto-scroll to show results
-        self.content_scroll.scroll_y = 1.0
+        # Auto-scroll to TOP to show the article title first
+        self.content_scroll.scroll_y = 0  # 0 = top, 1 = bottom
         
         source_name = "Unknown"
         try:
@@ -782,8 +782,8 @@ class AnalysisScreen(MDScreen):
         total_results_height += header_height
         
         title_text = article.get('title', 'Analysis Results')
-        if len(title_text) > 60:
-            title_text = title_text[:60] + "..."
+        if len(title_text) > 80:  # Increased from 60 to 80 characters
+            title_text = title_text[:80] + "..."
             
         title_label = MDLabel(
             text=title_text,
