@@ -782,8 +782,8 @@ class AnalysisScreen(MDScreen):
         total_results_height += header_height
         
         title_text = article.get('title', 'Analysis Results')
-        if len(title_text) > 80:  # Increased from 60 to 80 characters
-            title_text = title_text[:80] + "..."
+        if len(title_text) > 125:  # Increased from 60 to 80 characters
+            title_text = title_text[:125] + "..."
             
         title_label = MDLabel(
             text=title_text,
