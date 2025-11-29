@@ -289,25 +289,21 @@ class AnalysisScreen(MDScreen):
         )
         main_layout.add_widget(self.top_bar)
         
-        # All content in one scrollable area that takes remaining space
-        self.content_scroll = MDScrollView(
-            size_hint=(1, 1)  # Take all available space
-        )
-        self.content_layout = MDBoxLayout(
-            orientation="vertical", 
+        # Static Content Section - Inputs, buttons, and progress
+        static_content = MDBoxLayout(
+            orientation="vertical",
             size_hint_y=None,
+            height="380dp",  # Fixed height for static content
             padding="16dp",
-            spacing="16dp",
-            height="1200dp"  # Set a minimum height that's larger than screen
+            spacing="16dp"
         )
-        self.content_layout.bind(minimum_height=self.content_layout.setter('height'))
         
-        # Input Section - More compact
+        # Input Section
         input_layout = MDBoxLayout(
             orientation="vertical",
             spacing="10dp",
             size_hint_y=None,
-            height="260dp"  # Fixed height for input section
+            height="260dp"
         )
         
         input_title = MDLabel(
@@ -402,9 +398,9 @@ class AnalysisScreen(MDScreen):
         input_layout.add_widget(analysis_layout)
         input_layout.add_widget(category_layout)
         input_layout.add_widget(button_layout)
-        self.content_layout.add_widget(input_layout)
+        static_content.add_widget(input_layout)
         
-        # Progress Section - More compact
+        # Progress Section - Also static
         self.progress_layout = MDBoxLayout(
             orientation="vertical",
             spacing="6dp",
@@ -431,9 +427,25 @@ class AnalysisScreen(MDScreen):
         self.progress_layout.add_widget(progress_title)
         self.progress_layout.add_widget(self.status_label)
         self.progress_layout.add_widget(self.progress_bar)
-        self.content_layout.add_widget(self.progress_layout)
+        static_content.add_widget(self.progress_layout)
         
-        # Results Section - More compact initial state
+        # Add static content to main layout
+        main_layout.add_widget(static_content)
+        
+        # Scrollable Content Section - Only Analysis Results
+        self.content_scroll = MDScrollView(
+            size_hint=(1, 1)  # Take all remaining space
+        )
+        self.content_layout = MDBoxLayout(
+            orientation="vertical", 
+            size_hint_y=None,
+            padding="16dp",
+            spacing="16dp",
+            height="800dp"  # Initial height
+        )
+        self.content_layout.bind(minimum_height=self.content_layout.setter('height'))
+        
+        # Results Section Title (scrollable)
         results_title = MDLabel(
             text="Analysis Results",
             font_style="H6",
@@ -566,6 +578,9 @@ class AnalysisScreen(MDScreen):
         
         initial_item = TwoLineListItem(text=status_text, secondary_text=secondary_text)
         self.results_container.add_widget(initial_item)
+        
+        # Auto-scroll to show progress
+        self.content_scroll.scroll_y = 1.0
         
         Clock.schedule_once(lambda dt: self._perform_analysis(query, category), 0.5)
     
@@ -1091,13 +1106,11 @@ class AnalysisScreen(MDScreen):
         
         # Update the main content layout height to ensure proper scrolling
         total_content_height = (
-            260 +  # input section
-            80 +   # progress section  
             32 +   # results title
             total_results_height +
             (5 * 16)  # spacing between sections
         )
-        self.content_layout.height = max(1200, total_content_height)
+        self.content_layout.height = max(800, total_content_height)
     
     def set_analysis_type(self, button, analysis_type):
         for btn in self.analysis_buttons:
