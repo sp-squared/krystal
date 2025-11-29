@@ -47,11 +47,59 @@ class NetworkGraphWidget(Widget):
         
     def _update_graph(self, *args):
         self.canvas.clear()
-        # Add white background first to prevent black imprint
+        self._draw_network()
+        
+    def _draw_network(self):
+        if not self.entities or not self.relationships:
+            # Only draw background if there's no content
+            with self.canvas:
+                Color(1, 1, 1, 1)  # White background
+                Rectangle(pos=self.pos, size=self.size)
+            return
+            
+        center_x = self.center_x
+        center_y = self.center_y
+        radius = min(self.width, self.height) * 0.35
+        num_nodes = len(self.entities)
+        
         with self.canvas:
+            # Draw white background first
             Color(1, 1, 1, 1)  # White background
             Rectangle(pos=self.pos, size=self.size)
-        self._draw_network()
+            
+            # Draw relationships (lines)
+            for rel in self.relationships:
+                source_id = rel.get('source')
+                target_id = rel.get('target')
+                
+                if source_id in self.node_positions and target_id in self.node_positions:
+                    src_x, src_y = self.node_positions[source_id]
+                    tgt_x, tgt_y = self.node_positions[target_id]
+                    
+                    strength = rel.get('strength', 0.5)
+                    Color(0.3, 0.3, 0.8, strength)
+                    Line(points=[src_x, src_y, tgt_x, tgt_y], width=1.5)
+            
+            # Draw entities (nodes)
+            for i, entity in enumerate(self.entities):
+                entity_id = entity.get('id')
+                angle = 2 * math.pi * i / num_nodes
+                x = center_x + radius * math.cos(angle)
+                y = center_y + radius * math.sin(angle)
+                
+                self.node_positions[entity_id] = (x, y)
+                
+                entity_type = entity.get('type', 'organization')
+                colors = {
+                    'person': (0.2, 0.8, 0.2),
+                    'corporation': (0.8, 0.2, 0.2),
+                    'government': (0.2, 0.2, 0.8),
+                    'organization': (0.8, 0.8, 0.2)
+                }
+                color = colors.get(entity_type, (0.5, 0.5, 0.5))
+                
+                Color(*color)
+                Ellipse(pos=(x-15, y-15), size=(30, 30))
     
     def _draw_network(self):
         if not self.entities or not self.relationships:
