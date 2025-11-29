@@ -48,7 +48,7 @@ class NetworkGraphWidget(Widget):
     def _update_graph(self, *args):
         self.canvas.clear()
         self._draw_network()
-        
+    
     def _draw_network(self):
         if not self.entities or not self.relationships:
             # Only draw background if there's no content
@@ -68,50 +68,6 @@ class NetworkGraphWidget(Widget):
             Rectangle(pos=self.pos, size=self.size)
             
             # Draw relationships (lines)
-            for rel in self.relationships:
-                source_id = rel.get('source')
-                target_id = rel.get('target')
-                
-                if source_id in self.node_positions and target_id in self.node_positions:
-                    src_x, src_y = self.node_positions[source_id]
-                    tgt_x, tgt_y = self.node_positions[target_id]
-                    
-                    strength = rel.get('strength', 0.5)
-                    Color(0.3, 0.3, 0.8, strength)
-                    Line(points=[src_x, src_y, tgt_x, tgt_y], width=1.5)
-            
-            # Draw entities (nodes)
-            for i, entity in enumerate(self.entities):
-                entity_id = entity.get('id')
-                angle = 2 * math.pi * i / num_nodes
-                x = center_x + radius * math.cos(angle)
-                y = center_y + radius * math.sin(angle)
-                
-                self.node_positions[entity_id] = (x, y)
-                
-                entity_type = entity.get('type', 'organization')
-                colors = {
-                    'person': (0.2, 0.8, 0.2),
-                    'corporation': (0.8, 0.2, 0.2),
-                    'government': (0.2, 0.2, 0.8),
-                    'organization': (0.8, 0.8, 0.2)
-                }
-                color = colors.get(entity_type, (0.5, 0.5, 0.5))
-                
-                Color(*color)
-                Ellipse(pos=(x-15, y-15), size=(30, 30))
-    
-    def _draw_network(self):
-        if not self.entities or not self.relationships:
-            return
-            
-        center_x = self.center_x
-        center_y = self.center_y
-        radius = min(self.width, self.height) * 0.35
-        num_nodes = len(self.entities)
-        
-        with self.canvas:
-            # Draw relationships first (lines)
             for rel in self.relationships:
                 source_id = rel.get('source')
                 target_id = rel.get('target')
@@ -337,11 +293,11 @@ class AnalysisScreen(MDScreen):
         )
         main_layout.add_widget(self.top_bar)
         
-        # Static Content Section - Inputs, buttons, and progress
+        # Static Content Section - Inputs and buttons only
         static_content = MDBoxLayout(
             orientation="vertical",
             size_hint_y=None,
-            height="380dp",  # Fixed height for static content
+            height="300dp",  # Reduced height since progress is separate
             padding="16dp",
             spacing="16dp"
         )
@@ -448,12 +404,16 @@ class AnalysisScreen(MDScreen):
         input_layout.add_widget(button_layout)
         static_content.add_widget(input_layout)
         
-        # Progress Section - Also static
+        # Add static content to main layout
+        main_layout.add_widget(static_content)
+        
+        # Progress Section - Separate from static content, appears when needed
         self.progress_layout = MDBoxLayout(
             orientation="vertical",
             spacing="6dp",
             size_hint_y=None,
-            height="80dp"
+            height="0dp",  # Start with 0 height when hidden
+            padding="16dp"
         )
         self.progress_layout.opacity = 0  # Initially hidden
         
@@ -475,10 +435,7 @@ class AnalysisScreen(MDScreen):
         self.progress_layout.add_widget(progress_title)
         self.progress_layout.add_widget(self.status_label)
         self.progress_layout.add_widget(self.progress_bar)
-        static_content.add_widget(self.progress_layout)
-        
-        # Add static content to main layout
-        main_layout.add_widget(static_content)
+        main_layout.add_widget(self.progress_layout)
         
         # Scrollable Content Section - Only Analysis Results
         self.content_scroll = MDScrollView(
@@ -489,11 +446,11 @@ class AnalysisScreen(MDScreen):
             size_hint_y=None,
             padding="16dp",
             spacing="16dp",
-            height="800dp"  # Initial height
+            height="600dp"  # Initial height
         )
         self.content_layout.bind(minimum_height=self.content_layout.setter('height'))
         
-        # Results Section Title (scrollable)
+        # Results Section (scrollable)
         results_title = MDLabel(
             text="Analysis Results",
             font_style="H6",
@@ -612,7 +569,8 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.disabled = True
         self.analyze_btn.text = "Analyzing..."
         
-        # Show progress in static area
+        # Show progress - set height and opacity
+        self.progress_layout.height = "80dp"
         self.progress_layout.opacity = 1
         
         self.results_container.clear_widgets()
@@ -781,7 +739,8 @@ class AnalysisScreen(MDScreen):
             self.analyze_btn.text = "Start Analysis"
             
             def remove_progress(dt):
-                # Just hide the progress instead of removing from layout
+                # Hide progress - set height to 0 and opacity to 0
+                self.progress_layout.height = "0dp"
                 self.progress_layout.opacity = 0
                 self.progress_value = 0
                 self.status_text = "Ready to analyze power structures"
@@ -1158,7 +1117,7 @@ class AnalysisScreen(MDScreen):
             total_results_height +
             (5 * 16)  # spacing between sections
         )
-        self.content_layout.height = max(800, total_content_height)
+        self.content_layout.height = max(600, total_content_height)
     
     def set_analysis_type(self, button, analysis_type):
         for btn in self.analysis_buttons:
@@ -1251,6 +1210,7 @@ class AnalysisScreen(MDScreen):
         self.analyze_btn.text = "Start Analysis"
         
         # Hide progress
+        self.progress_layout.height = "0dp"
         self.progress_layout.opacity = 0
         self.progress_value = 0
         self.status_text = "Ready to analyze power structures"
